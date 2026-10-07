@@ -137,8 +137,13 @@ jobs:
       - run: cargo fmt --all -- --check
       - run: cargo clippy --all-targets --all-features -- -D warnings
       - run: cargo clippy --all-targets --no-default-features -- -D warnings
-      # The NEON and WASM tiers never compile on an x86 host.
+      # The NEON and WASM tiers never compile on an x86 host. --all-targets
+      # includes benches/adversarial.rs, whose C dependency (xxhash-c-sys)
+      # needs a C compiler for the target.
+      - run: sudo apt-get update && sudo apt-get install -y gcc-aarch64-linux-gnu
       - run: cargo clippy --all-targets --all-features --target aarch64-unknown-linux-gnu -- -D warnings
+        env:
+          CC_aarch64_unknown_linux_gnu: aarch64-linux-gnu-gcc
       - run: cargo clippy --lib --no-default-features --target wasm32-unknown-unknown -- -D warnings
         env:
           RUSTFLAGS: -D warnings -Ctarget-feature=+simd128
