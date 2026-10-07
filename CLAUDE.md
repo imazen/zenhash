@@ -63,6 +63,12 @@ Bench host for these entries: Xeon family 6 model 207 (Emerald Rapids),
   competes with the data-swap shuffle for one port on Intel): xxh3_64/64 KiB
   went from 11-13% behind twox-hash to 4% ahead. Separate runs on this VM
   drift +-4% relative to competitors, so judge changes by repeated runs.
+- Streaming: `update` was one out-of-line function; 64-byte updates ran
+  4-8% behind both competitors (~0.7 ns/call). An `#[inline]` buffer-only
+  fast path plus `#[inline(never)] update_slow` made them 10-16% faster than
+  both. Partial blocks (every streaming update leaves the block position
+  non-zero) use a masked key index `(k & 15) * 8` under 192-byte secrets, so
+  no bounds check. 4 KiB updates remain 1.4-3.7% behind twox-hash.
 - zenbench's resource gate stalled the bench on this VM (13 s CPU in 20 min).
   Run with `--no-busy-gate` there.
 

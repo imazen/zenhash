@@ -70,13 +70,24 @@ impl Xxh3 {
     }
 
     /// Feeds `data` into the hash.
+    #[inline]
     pub fn update(&mut self, data: &[u8]) {
         self.total_len = self.total_len.wrapping_add(data.len() as u64);
-        if data.len() <= BUFFER_SIZE - self.buffered {
-            self.buffer[self.buffered..self.buffered + data.len()].copy_from_slice(data);
+        // Fast path, inlined into the caller: the data fits in the buffer.
+        if let Some(dst) = self
+            .buffer
+            .get_mut(self.buffered..self.buffered + data.len())
+        {
+            dst.copy_from_slice(data);
             self.buffered += data.len();
-            return;
+        } else {
+            self.update_slow(data);
         }
+    }
+
+    /// Consumes the buffer and whole stripes of `data`; buffers the rest.
+    #[inline(never)]
+    fn update_slow(&mut self, data: &[u8]) {
         let secret = self.secret.long_secret();
         let mut data = data;
         if self.buffered > 0 {

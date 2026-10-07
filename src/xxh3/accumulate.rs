@@ -94,17 +94,27 @@ macro_rules! consume_body {
             }
             let n = (per_block - *$so_far).min(stripes.len());
             let (now, rest) = stripes.split_at(n);
-            // Windows of exactly 64 bytes let LLVM drop the per-stripe
-            // bounds check that indexing needs. `first_chunk` on a window
-            // never fails, so the `else` is unreachable.
-            let keys = $secret[*$so_far * SECRET_CONSUME_RATE..]
-                .windows(STRIPE_LEN)
-                .step_by(SECRET_CONSUME_RATE);
-            for (stripe, key) in now.iter().zip(keys) {
-                let Some(key) = key.first_chunk::<STRIPE_LEN>() else {
-                    break;
-                };
-                state = $accumulate(state, stripe, key);
+            if let Some(keys) = default_block_keys($secret, per_block) {
+                // Partial block under a 192-byte secret (streaming leaves
+                // these at every update). `k < 16` always holds; the mask
+                // lets LLVM prove `k * 8 + 64 <= 192` without a check.
+                for (k, stripe) in (*$so_far..).zip(now) {
+                    let off = (k & (DEFAULT_BLOCK_STRIPES - 1)) * SECRET_CONSUME_RATE;
+                    state = $accumulate(state, stripe, key_at(keys, off));
+                }
+            } else {
+                // Windows of exactly 64 bytes let LLVM drop the per-stripe
+                // bounds check that indexing needs. `first_chunk` on a
+                // window never fails, so the `else` is unreachable.
+                let keys = $secret[*$so_far * SECRET_CONSUME_RATE..]
+                    .windows(STRIPE_LEN)
+                    .step_by(SECRET_CONSUME_RATE);
+                for (stripe, key) in now.iter().zip(keys) {
+                    let Some(key) = key.first_chunk::<STRIPE_LEN>() else {
+                        break;
+                    };
+                    state = $accumulate(state, stripe, key);
+                }
             }
             *$so_far += n;
             if *$so_far == per_block {
