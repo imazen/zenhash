@@ -16,6 +16,7 @@ exclude = [
     "/docs/**", "/benchmarks/**", "/scripts/**", "/dev/**", "/tools/**",
     "/.github/**", "/.claude/**", "/.cargo/**", "/justfile", "/Cross.toml",
     "/CLAUDE.md", "/AGENTS.md", "/*.log", "/*.sh", "/*.py",
+    "/clippy.toml", "/deny.toml", "/_typos.toml", "/.gitignore",
 ]
 
 [features]
