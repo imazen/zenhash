@@ -517,7 +517,16 @@ fn long_acc(input: &[u8], secret: &[u8]) -> [u64; 8] {
 
 #[inline(never)]
 fn mid_64_default(data: &[u8]) -> u64 {
-    len_129to240_64::<false>(data, default_short_secret(), 0)
+    if cfg!(target_feature = "avx2") {
+        // Built with AVX2+ for all code (e.g. `-C target-cpu=native`), LLVM
+        // vectorizes the constant-key form with ymm/zmm (129 B: 12.7 ns vs
+        // 6.8). `black_box` keeps the default secret a runtime value, which
+        // stays scalar like the seeded path. In baseline builds the constant
+        // form is 4-8% faster, so it stays there (see CLAUDE.md).
+        len_129to240_64::<true>(data, core::hint::black_box(default_short_secret()), 0)
+    } else {
+        len_129to240_64::<false>(data, default_short_secret(), 0)
+    }
 }
 
 #[inline(never)]

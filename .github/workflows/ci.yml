@@ -41,6 +41,13 @@ jobs:
       # --all-features includes `avx512` and `_dev`, so the tier-permutation
       # test also disables tiers the target guarantees at compile time.
       - run: cargo test --all-features
+      # Code under cfg!(target_feature = ...) and incant!'s compile-time
+      # dispatch only compile when the target features are on for all code.
+      - name: Test with -C target-cpu=native
+        if: matrix.os == 'ubuntu-latest' || matrix.os == 'ubuntu-24.04-arm'
+        run: cargo test --all-features
+        env:
+          RUSTFLAGS: -D warnings -C target-cpu=native
 
   i686:
     name: Test (i686-unknown-linux-gnu, cross)

@@ -131,6 +131,13 @@ Bench host for these entries: Xeon family 6 model 207 (Emerald Rapids),
   Valgrind (AVX2 build) counts ~270 instructions per 241-byte hash for both
   zenhash and C, so the remaining gap to C at -march=native (10.9 ns at
   241 B) is stalls or code placement, not work. No PMU in this VM.
+- `-C target-cpu=native` builds: with AVX2/AVX-512 enabled for all code, the
+  SLP vectorizer packs the seed-0 mid path (constant-key u64 form) into
+  ymm/zmm: 129 B 12.7 ns vs 6.8 in baseline builds. `mid_64_default` uses
+  `cfg!(target_feature = "avx2")` to switch to the u128 form with the
+  secret behind `core::hint::black_box` (scalar in both builds; 4-8% slower
+  than the constant form in baseline builds, so only there). CI runs the
+  suite with `target-cpu=native` on ubuntu x64/arm for this branch.
 - XXH32/XXH64 at 16 B: 2-9% behind both competitors. The asm matches
   xxhash-rust's nearly instruction for instruction (we add a `push rbx` and a
   mask); not chased further.
