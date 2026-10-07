@@ -29,6 +29,12 @@ test-aarch64-qemu:
     CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_RUNNER="qemu-aarch64 -L /usr/aarch64-linux-gnu" \
     cargo test --target aarch64-unknown-linux-gnu --features _dev
 
+# Big-endian (scalar path, byte-swapping reads) under qemu (apt: qemu-user gcc-s390x-linux-gnu)
+test-s390x-qemu:
+    CARGO_TARGET_S390X_UNKNOWN_LINUX_GNU_LINKER=s390x-linux-gnu-gcc \
+    CARGO_TARGET_S390X_UNKNOWN_LINUX_GNU_RUNNER="qemu-s390x -L /usr/s390x-linux-gnu" \
+    cargo test --target s390x-unknown-linux-gnu
+
 # no_std and wasm builds
 check-targets:
     cargo check --target thumbv7em-none-eabihf --no-default-features

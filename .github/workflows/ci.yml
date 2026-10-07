@@ -57,6 +57,22 @@ jobs:
       - run: cross test --target i686-unknown-linux-gnu
       - run: cross test --target i686-unknown-linux-gnu --no-default-features
 
+  big-endian:
+    name: Test (s390x big-endian, cross)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: s390x-unknown-linux-gnu
+      - uses: taiki-e/install-action@cross
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: cross-s390x
+      # The only CI target where SIMD dispatch is skipped for byte order and
+      # every little-endian read must byte-swap.
+      - run: cross test --target s390x-unknown-linux-gnu
+
   wasm:
     name: WASM (wasm32-unknown-unknown check, wasm32-wasip1 tests)
     runs-on: ubuntu-latest

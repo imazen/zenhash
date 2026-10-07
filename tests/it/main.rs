@@ -3,6 +3,7 @@
 mod api;
 mod fuzz_regression;
 mod oracle;
+mod random;
 mod tiers;
 mod vectors;
 
