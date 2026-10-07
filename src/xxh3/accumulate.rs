@@ -72,22 +72,33 @@ macro_rules! consume_body {
         let mut state = $load($acc);
         let mut stripes = $stripes;
         while !stripes.is_empty() {
-            // Fast path: a whole block under a 192..=199-byte secret (the
-            // default and every seed-derived secret). Constant key offsets
-            // remove the per-stripe loop bookkeeping.
+            // Fast path: a block that starts at stripe 0 under a 192..=199-byte
+            // secret (the default and every seed-derived secret). Covers the
+            // partial last block every one-shot hash ends with. Constant-bounded
+            // key offsets remove the per-stripe bookkeeping and bounds checks.
             if *$so_far == 0 {
-                if let (Some((block, rest)), Some(keys)) = (
-                    stripes.split_first_chunk::<DEFAULT_BLOCK_STRIPES>(),
-                    default_block_keys($secret, per_block),
-                ) {
+                if let Some(keys) = default_block_keys($secret, per_block) {
+                    let k = stripes.len().min(DEFAULT_BLOCK_STRIPES);
+                    let (block, rest) = stripes.split_at(k);
                     // Two stripes per iteration halves the loop overhead.
-                    let (pairs, _) = block.as_chunks::<2>();
-                    for (i, [a, b]) in pairs.iter().enumerate() {
+                    let (pairs, odd) = block.as_chunks::<2>();
+                    for (i, [a, b]) in pairs.iter().enumerate().take(DEFAULT_BLOCK_STRIPES / 2) {
                         let off = 2 * i * SECRET_CONSUME_RATE;
                         state = $accumulate(state, a, key_at(keys, off));
                         state = $accumulate(state, b, key_at(keys, off + SECRET_CONSUME_RATE));
                     }
-                    state = $scramble(state, scramble_key);
+                    if let [c] = odd {
+                        // An odd stripe exists only when k < 16; the mask is a
+                        // no-op that proves the offset in bounds.
+                        let off =
+                            (2 * pairs.len() & (DEFAULT_BLOCK_STRIPES - 1)) * SECRET_CONSUME_RATE;
+                        state = $accumulate(state, c, key_at(keys, off));
+                    }
+                    if k == DEFAULT_BLOCK_STRIPES {
+                        state = $scramble(state, scramble_key);
+                    } else {
+                        *$so_far = k;
+                    }
                     stripes = rest;
                     continue;
                 }
@@ -169,6 +180,8 @@ fn scramble_scalar(mut acc: [u64; 8], key: &[u8; 64]) -> [u64; 8] {
     acc
 }
 
+// Out of line for the same reason as `consume_v1`.
+#[inline(never)]
 fn consume_scalar(
     _token: ScalarToken,
     acc: &mut [u64; 8],
@@ -260,8 +273,23 @@ mod x86 {
         acc
     }
 
-    #[arcane(import_intrinsics)]
+    /// SSE2 is the x86-64 baseline, so `incant!` reaches this tier without a
+    /// CPU check. Out of line, it keeps its register saves out of the
+    /// dispatcher's path to the AVX2 kernel (see CLAUDE.md).
+    #[inline(never)]
     pub(super) fn consume_v1(
+        token: X64V1Token,
+        acc: &mut [u64; 8],
+        stripes: &[[u8; STRIPE_LEN]],
+        so_far: &mut usize,
+        secret: &[u8],
+        last: Option<&[u8; STRIPE_LEN]>,
+    ) {
+        consume_v1_kernel(token, acc, stripes, so_far, secret, last);
+    }
+
+    #[arcane(import_intrinsics)]
+    fn consume_v1_kernel(
         _token: X64V1Token,
         acc: &mut [u64; 8],
         stripes: &[[u8; STRIPE_LEN]],

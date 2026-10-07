@@ -80,6 +80,13 @@ Bench host for these entries: Xeon family 6 model 207 (Emerald Rapids),
   separate seed-0 and seeded helpers. Check `xmm` counts in the asm of
   `mid_64_*` / `mid_128_*` after touching them. Result at 240 B:
   xxh3_64 26-31%, seeded 10-14% faster than twox-hash, 128-bit tied.
+- 1 KiB one-shot (15 stripes, no whole block): the generic partial-block
+  loop plus a dispatcher that had the scalar and SSE2 tiers inlined (six
+  pushes/pops before the tail jump to AVX2) put us 3.5-5% behind twox-hash,
+  21-22% behind with `avx512`. Fallback tiers are now `#[inline(never)]` (the
+  dispatch inlines to one cached-byte check) and the fast path also takes a
+  partial block starting at stripe 0 (every one-shot's last block): 2-4%
+  ahead by default, 1-3% behind with `avx512`.
 - XXH32/XXH64 at 16 B: 2-9% behind both competitors. The asm matches
   xxhash-rust's nearly instruction for instruction (we add a `push rbx` and a
   mask); not chased further.
