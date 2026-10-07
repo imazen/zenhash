@@ -1,0 +1,49 @@
+[package]
+name = "zenhash"
+version = "0.1.0"
+edition = "2024"
+rust-version = "1.89"
+license = "MIT OR Apache-2.0"
+description = "xxHash (XXH3, XXH32, XXH64) in safe Rust with runtime SIMD dispatch."
+repository = "https://github.com/imazen/zenhash"
+documentation = "https://docs.rs/zenhash"
+readme = "README.crates.md"
+keywords = ["hash", "xxhash", "xxh3", "simd", "no-std"]
+categories = ["algorithms", "no-std"]
+# Denylist, not an allowlist: a new runtime asset under src/ can't be forgotten.
+exclude = [
+    "/tests/**", "/benches/**", "/examples/**", "/fuzz/**", "/apidoc/**",
+    "/docs/**", "/benchmarks/**", "/scripts/**", "/dev/**", "/tools/**",
+    "/.github/**", "/.claude/**", "/.cargo/**", "/justfile", "/Cross.toml",
+    "/CLAUDE.md", "/AGENTS.md", "/*.log", "/*.sh", "/*.py",
+]
+
+[features]
+default = ["std"]
+# archmage detects CPU features at runtime only with its `std` feature. Without
+# it, dispatch sees only the features enabled at compile time.
+std = ["archmage/std", "whereat/std"]
+# AVX-512 tier for the XXH3 accumulator. Costs compile time.
+avx512 = ["archmage/avx512"]
+# Dev-only: lets tests disable SIMD tiers the target guarantees. Never in `default`.
+_dev = ["archmage/testable_dispatch"]
+
+[dependencies]
+archmage = { version = "0.9.29", default-features = false }
+whereat = { version = "0.1.5", default-features = false }
+
+[dev-dependencies]
+archmage = { version = "0.9.29", features = ["std"] }
+twox-hash = { version = "2.1.5", default-features = false, features = ["std", "xxhash32", "xxhash64", "xxhash3_64", "xxhash3_128"] }
+xxhash-rust = { version = "0.8.19", features = ["xxh3", "xxh32", "xxh64"] }
+
+[lints.rust]
+unsafe_code = "forbid"
+unreachable_pub = "warn"
+
+[lints.clippy]
+all = { level = "warn", priority = -1 }
+
+# Tests hash megabytes in debug builds; dependents never inherit this.
+[profile.test]
+opt-level = 2
