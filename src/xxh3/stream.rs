@@ -112,6 +112,7 @@ impl Xxh3 {
             let (stripes, _) = self.buffer.as_chunks::<STRIPE_LEN>();
             accumulate::consume(
                 &mut self.acc,
+                false,
                 stripes,
                 &mut self.stripes_so_far,
                 secret,
@@ -127,6 +128,7 @@ impl Xxh3 {
             let (stripes, _) = whole.as_chunks::<STRIPE_LEN>();
             accumulate::consume(
                 &mut self.acc,
+                false,
                 stripes,
                 &mut self.stripes_so_far,
                 secret,
@@ -151,14 +153,14 @@ impl Xxh3 {
             let n = (self.buffered - 1) / STRIPE_LEN;
             let (stripes, _) = self.buffer[..n * STRIPE_LEN].as_chunks::<STRIPE_LEN>();
             let last = self.buffer[..self.buffered].last_chunk::<STRIPE_LEN>();
-            accumulate::consume(&mut acc, stripes, &mut so_far, secret, last);
+            accumulate::consume(&mut acc, false, stripes, &mut so_far, secret, last);
         } else {
             // The final stripe straddles the end of the previous buffer.
             let catchup = STRIPE_LEN - self.buffered;
             let mut last = [0u8; STRIPE_LEN];
             last[..catchup].copy_from_slice(&self.buffer[BUFFER_SIZE - catchup..]);
             last[catchup..].copy_from_slice(&self.buffer[..self.buffered]);
-            accumulate::consume(&mut acc, &[], &mut so_far, secret, Some(&last));
+            accumulate::consume(&mut acc, false, &[], &mut so_far, secret, Some(&last));
         }
         acc
     }

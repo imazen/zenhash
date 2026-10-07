@@ -14,7 +14,7 @@
 #[allow(unused_imports)]
 use archmage::prelude::*;
 
-use super::{SECRET_CONSUME_RATE, SECRET_LASTACC_START, STRIPE_LEN};
+use super::{INIT_ACC, SECRET_CONSUME_RATE, SECRET_LASTACC_START, STRIPE_LEN};
 
 /// The 64 secret bytes at `off`. Callers guarantee `off + 64 <= secret.len()`.
 #[inline(always)]
@@ -26,13 +26,15 @@ fn key_at(secret: &[u8], off: usize) -> &[u8; 64] {
     }
 }
 
-/// Accumulates `stripes` into `acc`, scrambling at every block boundary. Then,
+/// Accumulates `stripes` into `acc` (or, when `fresh`, into the initial
+/// accumulators; `acc` is then output only), scrambling at every block boundary. Then,
 /// if `last` is given, accumulates it with the last-stripe secret offset (no
 /// scramble). `so_far` counts stripes already accumulated in the current block.
 ///
 /// `secret` must be at least 136 bytes long, which the public API validates.
 pub(super) fn consume(
     acc: &mut [u64; 8],
+    fresh: bool,
     stripes: &[[u8; STRIPE_LEN]],
     so_far: &mut usize,
     secret: &[u8],
@@ -40,10 +42,10 @@ pub(super) fn consume(
 ) {
     // The SIMD tiers read lanes in native byte order.
     if cfg!(target_endian = "big") {
-        return consume_scalar(ScalarToken, acc, stripes, so_far, secret, last);
+        return consume_scalar(ScalarToken, acc, fresh, stripes, so_far, secret, last);
     }
     incant!(
-        consume(acc, stripes, so_far, secret, last),
+        consume(acc, fresh, stripes, so_far, secret, last),
         [v4(cfg(avx512)), v3, v1, neon, wasm128, scalar]
     )
 }
@@ -65,11 +67,19 @@ fn default_block_keys(secret: &[u8], per_block: usize) -> Option<&[u8; 192]> {
 /// between `[u64; 8]` and the tier's registers; `$accumulate` and `$scramble`
 /// take and return that register state.
 macro_rules! consume_body {
-    ($acc:ident, $stripes:ident, $so_far:ident, $secret:ident, $last:ident,
+    ($acc:ident, $fresh:ident, $stripes:ident, $so_far:ident, $secret:ident, $last:ident,
      $load:ident, $store:ident, $accumulate:ident, $scramble:ident) => {{
         let per_block = ($secret.len() - STRIPE_LEN) / SECRET_CONSUME_RATE;
         let scramble_key = key_at($secret, $secret.len() - STRIPE_LEN);
-        let mut state = $load($acc);
+        // A fresh hash loads the initial accumulators from the read-only
+        // constant. Loading them as one wide vector from a stack copy that
+        // was just written in narrower pieces defeats store forwarding: it
+        // cost 241..1024-byte AVX-512 hashes up to 11 ns (see CLAUDE.md).
+        let mut state = if $fresh {
+            $load(&INIT_ACC)
+        } else {
+            $load($acc)
+        };
         let mut stripes = $stripes;
         while !stripes.is_empty() {
             // Fast path: a block that starts at stripe 0 under a 192..=199-byte
@@ -185,6 +195,7 @@ fn scramble_scalar(mut acc: [u64; 8], key: &[u8; 64]) -> [u64; 8] {
 fn consume_scalar(
     _token: ScalarToken,
     acc: &mut [u64; 8],
+    fresh: bool,
     stripes: &[[u8; STRIPE_LEN]],
     so_far: &mut usize,
     secret: &[u8],
@@ -192,6 +203,7 @@ fn consume_scalar(
 ) {
     consume_body!(
         acc,
+        fresh,
         stripes,
         so_far,
         secret,
@@ -211,7 +223,7 @@ mod x86 {
     use archmage::prelude::*;
 
     use super::{
-        DEFAULT_BLOCK_STRIPES, SECRET_CONSUME_RATE, SECRET_LASTACC_START, STRIPE_LEN,
+        DEFAULT_BLOCK_STRIPES, INIT_ACC, SECRET_CONSUME_RATE, SECRET_LASTACC_START, STRIPE_LEN,
         default_block_keys, key_at,
     };
     use crate::common::PRIME32_1;
@@ -280,18 +292,20 @@ mod x86 {
     pub(super) fn consume_v1(
         token: X64V1Token,
         acc: &mut [u64; 8],
+        fresh: bool,
         stripes: &[[u8; STRIPE_LEN]],
         so_far: &mut usize,
         secret: &[u8],
         last: Option<&[u8; STRIPE_LEN]>,
     ) {
-        consume_v1_kernel(token, acc, stripes, so_far, secret, last);
+        consume_v1_kernel(token, acc, fresh, stripes, so_far, secret, last);
     }
 
     #[arcane(import_intrinsics)]
     fn consume_v1_kernel(
         _token: X64V1Token,
         acc: &mut [u64; 8],
+        fresh: bool,
         stripes: &[[u8; STRIPE_LEN]],
         so_far: &mut usize,
         secret: &[u8],
@@ -299,6 +313,7 @@ mod x86 {
     ) {
         consume_body!(
             acc,
+            fresh,
             stripes,
             so_far,
             secret,
@@ -360,6 +375,7 @@ mod x86 {
     pub(super) fn consume_v3(
         _token: X64V3Token,
         acc: &mut [u64; 8],
+        fresh: bool,
         stripes: &[[u8; STRIPE_LEN]],
         so_far: &mut usize,
         secret: &[u8],
@@ -367,6 +383,7 @@ mod x86 {
     ) {
         consume_body!(
             acc,
+            fresh,
             stripes,
             so_far,
             secret,
@@ -424,6 +441,7 @@ mod x86 {
     pub(super) fn consume_v4(
         _token: X64V4Token,
         acc: &mut [u64; 8],
+        fresh: bool,
         stripes: &[[u8; STRIPE_LEN]],
         so_far: &mut usize,
         secret: &[u8],
@@ -431,6 +449,7 @@ mod x86 {
     ) {
         consume_body!(
             acc,
+            fresh,
             stripes,
             so_far,
             secret,
@@ -454,7 +473,7 @@ mod arm {
     use archmage::prelude::*;
 
     use super::{
-        DEFAULT_BLOCK_STRIPES, SECRET_CONSUME_RATE, SECRET_LASTACC_START, STRIPE_LEN,
+        DEFAULT_BLOCK_STRIPES, INIT_ACC, SECRET_CONSUME_RATE, SECRET_LASTACC_START, STRIPE_LEN,
         default_block_keys, key_at,
     };
     use crate::common::PRIME32_1;
@@ -517,6 +536,7 @@ mod arm {
     pub(super) fn consume_neon(
         _token: NeonToken,
         acc: &mut [u64; 8],
+        fresh: bool,
         stripes: &[[u8; STRIPE_LEN]],
         so_far: &mut usize,
         secret: &[u8],
@@ -524,6 +544,7 @@ mod arm {
     ) {
         consume_body!(
             acc,
+            fresh,
             stripes,
             so_far,
             secret,
@@ -547,7 +568,7 @@ mod wasm {
     use archmage::prelude::*;
 
     use super::{
-        DEFAULT_BLOCK_STRIPES, SECRET_CONSUME_RATE, SECRET_LASTACC_START, STRIPE_LEN,
+        DEFAULT_BLOCK_STRIPES, INIT_ACC, SECRET_CONSUME_RATE, SECRET_LASTACC_START, STRIPE_LEN,
         default_block_keys, key_at,
     };
     use crate::common::PRIME32_1;
@@ -605,6 +626,7 @@ mod wasm {
     pub(super) fn consume_wasm128(
         _token: Wasm128Token,
         acc: &mut [u64; 8],
+        fresh: bool,
         stripes: &[[u8; STRIPE_LEN]],
         so_far: &mut usize,
         secret: &[u8],
@@ -612,6 +634,7 @@ mod wasm {
     ) {
         consume_body!(
             acc,
+            fresh,
             stripes,
             so_far,
             secret,

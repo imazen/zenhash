@@ -119,6 +119,18 @@ Bench host for these entries: Xeon family 6 model 207 (Emerald Rapids),
   dispatch inlines to one cached-byte check) and the fast path also takes a
   partial block starting at stripe 0 (every one-shot's last block): 2-4%
   ahead by default, 1-3% behind with `avx512`.
+- 241 B..1 KiB fixed cost (found by benches/adversarial.rs, sizes the main
+  bench lacked): one-shot hashes copied INIT_ACC to the stack as four
+  16-byte stores and the kernel reloaded it as one 64-byte (AVX-512) or two
+  32-byte vectors, a store-forwarding failure. Loading from the constant
+  instead (`fresh`): AVX-512 241 B 25.9 -> 18.7 ns, 320 B 26.9 -> 18.5,
+  512 B 32.5 -> 22-24, 1 KiB 35.9 -> 30.5 (ad-hoc Instant loop, best of 7).
+  Dead ends, both measured: a 64-byte-aligned accumulator (C's
+  `XXH_ALIGN(64)`; no change, 18.8 -> 18.6 ns) and merging inside the tier
+  function to avoid the vector-store/scalar-reload (no gain; 512 B worse).
+  Valgrind (AVX2 build) counts ~270 instructions per 241-byte hash for both
+  zenhash and C, so the remaining gap to C at -march=native (10.9 ns at
+  241 B) is stalls or code placement, not work. No PMU in this VM.
 - XXH32/XXH64 at 16 B: 2-9% behind both competitors. The asm matches
   xxhash-rust's nearly instruction for instruction (we add a `push rbx` and a
   mask); not chased further.

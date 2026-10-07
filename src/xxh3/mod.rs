@@ -492,13 +492,13 @@ pub(crate) fn finish_long_128(acc: &[u64; 8], secret: &[u8], len: u64) -> u128 {
 /// Runs the stripe accumulator over a whole one-shot input (`len > 240`).
 #[inline(always)]
 fn long_acc(input: &[u8], secret: &[u8]) -> [u64; 8] {
-    let mut acc = INIT_ACC;
+    let mut acc = [0; 8];
     // Every byte but the last goes through whole stripes; the final stripe is
     // the last 64 bytes, re-read with its own secret offset.
     let (stripes, _) = input[..input.len() - 1].as_chunks::<STRIPE_LEN>();
     let last = input.last_chunk::<STRIPE_LEN>();
     let mut so_far = 0;
-    accumulate::consume(&mut acc, stripes, &mut so_far, secret, last);
+    accumulate::consume(&mut acc, true, stripes, &mut so_far, secret, last);
     acc
 }
 
