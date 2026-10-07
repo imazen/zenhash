@@ -1,0 +1,23 @@
+[package]
+name = "zenhash-fuzz"
+version = "0.0.0"
+publish = false
+edition = "2024"
+
+[package.metadata]
+cargo-fuzz = true
+
+[dependencies]
+libfuzzer-sys = "0.4"
+xxhash-rust = { version = "0.8.19", features = ["xxh3", "xxh32", "xxh64"] }
+zenhash = { path = ".." }
+
+[[bin]]
+name = "hash_parity"
+path = "fuzz_targets/hash_parity.rs"
+test = false
+doc = false
+bench = false
+
+# Standalone workspace so the parent crate never builds the fuzz tree.
+[workspace]

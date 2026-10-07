@@ -1,0 +1,16 @@
+# Posts one advisory PR comment with the public-API diff against
+# docs/public-api/*.txt (reusable workflow from imazen/zenutils).
+name: api-guard
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  api-guard:
+    uses: imazen/zenutils/.github/workflows/api-guard.yml@main
+    # Pin instead of @main when you want a fixed kit rev:
+    # with: { kit-ref: "<sha>" }

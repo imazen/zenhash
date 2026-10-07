@@ -1,4 +1,6 @@
-# zenhash [![CI](https://img.shields.io/github/actions/workflow/status/imazen/zenhash/ci.yml?style=flat-square&label=CI)](https://github.com/imazen/zenhash/actions/workflows/ci.yml) [![crates.io](https://img.shields.io/crates/v/zenhash?style=flat-square)](https://crates.io/crates/zenhash) [![lib.rs](https://img.shields.io/crates/v/zenhash?style=flat-square&label=lib.rs&color=blue)](https://lib.rs/crates/zenhash) [![docs.rs](https://img.shields.io/docsrs/zenhash?style=flat-square)](https://docs.rs/zenhash) [![license](https://img.shields.io/crates/l/zenhash?style=flat-square)](#license) [![MSRV](https://img.shields.io/badge/MSRV-1.89-blue?style=flat-square)](https://github.com/imazen/zenhash/blob/main/Cargo.toml)
+<!-- GENERATED FROM README.md by zenutils gen-readme-crates.sh — DO NOT EDIT. -->
+
+# zenhash
 
 zenhash is an implementation of the xxHash family (XXH3 64/128, XXH64, XXH32) in safe Rust, with runtime SIMD dispatch for XXH3.
 
@@ -106,41 +108,6 @@ the tests on x86-64 and aarch64 Linux, Windows and macOS, i686, and
 wasm32-wasip1 with and without SIMD128. A differential fuzz target lives in
 `fuzz/`.
 
-<!-- crates.io:skip-start -->
-## Benchmarks
-
-Single thread, one Intel Xeon (Emerald Rapids, family 6 model 207) 4-vCPU
-VM, rustc 1.97.0, no `target-cpu=native`, against twox-hash 2.1.5 and
-xxhash-rust 0.8.19. Full tables, method and repro commands:
-[benchmarks/xxhash_2026-10-07.md](https://github.com/imazen/zenhash/blob/main/benchmarks/xxhash_2026-10-07.md).
-
-Default build (AVX-512 tier on this CPU):
-
-| XXH3-64 input | zenhash | twox-hash | xxhash-rust |
-|---|---|---|---|
-| 240 B | 17.8 GiB/s | 29-32% slower | 97-101% slower |
-| 1 KiB | 28.9 GiB/s | 1-3% slower | 47-49% slower |
-| 64 KiB | 42.3 GiB/s | 24-27% slower | 97-100% slower |
-| 1 MiB | 33.0 GiB/s | 29-31% slower | 75-79% slower |
-| 1 MiB in 4 KiB `update` calls | 25.9 GiB/s | 13-16% slower | 43-45% slower |
-| 1 MiB in 64 B `update` calls | 8.6 GiB/s | 14-16% slower | 11-12% slower |
-
-On a CPU without AVX-512 (AVX2 tier, measured with the feature off): 64 KiB
-at 32.3 GiB/s, within 3.5% of twox-hash and 53-54% faster than xxhash-rust.
-
-An adversarial run, where every competitor (including the C reference,
-xxHash 0.8.3) is compiled for this exact CPU with fat LTO, is in
-[benchmarks/adversarial_2026-10-07.md](https://github.com/imazen/zenhash/blob/main/benchmarks/adversarial_2026-10-07.md).
-There the C library built with `-march=native` is 8-44% faster than zenhash
-from 241 B up, and xxhash-rust's compile-time AVX-512 path 5-15% faster.
-
-Percentages are zenbench's 95% confidence intervals of each competitor's
-time relative to zenhash's. Where zenhash loses or ties: XXH32 and XXH64 at
-16 bytes (2-15% slower), XXH3 below 64 bytes (within about 10% of
-xxhash-rust, either direction from run to run), and 64 KiB and up on CPUs without AVX-512
-(within 3.5% of twox-hash). The VM's run-to-run drift is large;
-treat these as one machine's results.
-<!-- crates.io:skip-end -->
 
 ## License
 

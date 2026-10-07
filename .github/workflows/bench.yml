@@ -1,0 +1,50 @@
+name: Benchmarks
+
+# Runs the zenbench suite on every supported platform on main (or by hand)
+# and uploads the output. Shared runners are noisy: use the uploaded numbers
+# to spot platform-specific regressions, not as published results (those
+# live in benchmarks/*.md with their hardware).
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      filter:
+        description: 'ZENHASH_BENCH group filter (substring, empty = all)'
+        required: false
+        default: ''
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  ZENHASH_BENCH: ${{ github.event.inputs.filter }}
+
+jobs:
+  bench:
+    name: bench (${{ matrix.name }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { os: ubuntu-latest, name: Linux x86_64 }
+          - { os: ubuntu-24.04-arm, name: Linux aarch64 }
+          - { os: macos-latest, name: macOS aarch64 }
+          - { os: macos-26-intel, name: macOS x86_64 }
+          - { os: windows-latest, name: Windows x86_64 }
+          - { os: windows-11-arm, name: Windows aarch64 }
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - name: Run benchmarks
+        shell: bash
+        run: cargo bench --bench hash -- --no-busy-gate --format=md > bench-output.md
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: bench-${{ matrix.name }}
+          path: bench-output.md

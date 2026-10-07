@@ -1,0 +1,12 @@
+# Public-API snapshot runner. Its own workspace, so plain `cargo test` and CI
+# never compile zenutils-apidoc's dependency tree. Regenerate with `just api-doc`.
+[package]
+name = "zenhash-apidoc"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+zenutils-apidoc = "0.1.1"
+
+[workspace]
