@@ -60,6 +60,7 @@ fn finalize(mut h: u32, rest: &[u8]) -> u32 {
 /// ```
 /// assert_eq!(zenhash::xxh32(b"", 0), 0x02CC_5D05);
 /// ```
+#[must_use]
 pub fn xxh32(data: &[u8], seed: u32) -> u32 {
     let (stripes, rest) = data.as_chunks::<16>();
     let h = if stripes.is_empty() {
@@ -82,7 +83,7 @@ pub fn xxh32(data: &[u8], seed: u32) -> u32 {
 /// h.update(b"world");
 /// assert_eq!(h.digest(), zenhash::xxh32(b"hello world", 7));
 /// ```
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Xxh32 {
     v: [u32; 4],
     total_len: u64,
@@ -92,6 +93,11 @@ pub struct Xxh32 {
 }
 
 impl Xxh32 {
+    /// Creates a hasher with seed 0.
+    pub fn new() -> Self {
+        Self::with_seed(0)
+    }
+
     /// Creates a hasher with `seed`.
     pub fn with_seed(seed: u32) -> Self {
         Self {
@@ -122,6 +128,7 @@ impl Xxh32 {
     }
 
     /// Returns the hash of everything fed so far. Does not reset the state.
+    #[must_use]
     pub fn digest(&self) -> u32 {
         let h = if self.total_len >= 16 {
             merge_lanes(&self.v)
@@ -141,12 +148,25 @@ impl Xxh32 {
 }
 
 impl Default for Xxh32 {
-    /// Seed 0.
+    /// Seed 0, same as [`new`](Self::new).
     fn default() -> Self {
-        Self::with_seed(0)
+        Self::new()
     }
 }
 
+/// Shows the byte count only: the seed and buffered input stay out of logs.
+impl core::fmt::Debug for Xxh32 {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        f.debug_struct("Xxh32")
+            .field("total_len", &self.total_len)
+            .finish_non_exhaustive()
+    }
+}
+
+/// `Hasher::write_u32` and the other integer methods feed the integer's
+/// native-endian bytes, and `Hash` impls for slices and strings add a length
+/// prefix of platform-dependent width. For hashes that must match across
+/// platforms or other xxHash implementations, feed bytes with `write`/`update`.
 impl core::hash::Hasher for Xxh32 {
     #[inline]
     fn write(&mut self, bytes: &[u8]) {
@@ -157,5 +177,19 @@ impl core::hash::Hasher for Xxh32 {
     #[inline]
     fn finish(&self) -> u64 {
         u64::from(self.digest())
+    }
+}
+
+#[cfg(feature = "std")]
+impl std::io::Write for Xxh32 {
+    #[inline]
+    fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {
+        self.update(buf);
+        Ok(buf.len())
+    }
+
+    #[inline]
+    fn flush(&mut self) -> std::io::Result<()> {
+        Ok(())
     }
 }

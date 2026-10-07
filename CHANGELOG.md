@@ -8,7 +8,10 @@
 ### Added
 - `xxh3_64`, `xxh3_128` and their `_with_seed` / `_with_secret` variants;
   streaming `Xxh3` with 64- and 128-bit digests (1c0b386)
-- `xxh64`, `xxh32`, streaming `Xxh64`, `Xxh32` (1c0b386)
+- `xxh64`, `xxh32`, streaming `Xxh64`, `Xxh32` (1c0b386), with `new()` and
+  `std::io::Write` like `Xxh3`
+- `Debug` for the hashers shows only the byte count (no seeds, secrets or
+  buffered input); `#[must_use]` on hash functions and digests
 - XXH3 long-input accumulator with runtime dispatch to AVX-512 (`avx512`
   feature, on by default), AVX2, SSE2, NEON, WASM SIMD128 and scalar (1c0b386)
 

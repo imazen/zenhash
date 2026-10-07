@@ -570,6 +570,7 @@ fn long_128_seeded(data: &[u8], seed: u64) -> u128 {
 /// ```
 /// assert_eq!(zenhash::xxh3_64(b""), 0x2D06_8005_38D3_94C2);
 /// ```
+#[must_use]
 pub fn xxh3_64(data: &[u8]) -> u64 {
     match data.len() {
         0..=16 => len_0to16_64(data, default_short_secret(), 0),
@@ -579,7 +580,14 @@ pub fn xxh3_64(data: &[u8]) -> u64 {
     }
 }
 
-/// Computes the 64-bit XXH3 hash of `data` with `seed`.
+/// Computes the 64-bit XXH3 hash of `data` with `seed`. Seed 0 gives the
+/// same value as [`xxh3_64`].
+///
+/// ```
+/// assert_eq!(zenhash::xxh3_64_with_seed(b"abc", 0), zenhash::xxh3_64(b"abc"));
+/// assert_ne!(zenhash::xxh3_64_with_seed(b"abc", 1), zenhash::xxh3_64(b"abc"));
+/// ```
+#[must_use]
 pub fn xxh3_64_with_seed(data: &[u8], seed: u64) -> u64 {
     match data.len() {
         0..=16 => len_0to16_64(data, default_short_secret(), seed),
@@ -595,7 +603,15 @@ pub fn xxh3_64_with_seed(data: &[u8], seed: u64) -> u64 {
 /// [`XXH3_SECRET_SIZE_MIN`] bytes.
 ///
 /// The secret should look random: the xxHash documentation recommends
-/// generating one from a high-entropy source.
+/// generating one from a high-entropy source. Returns
+/// [`Error::SecretTooShort`] for a shorter secret.
+///
+/// ```
+/// let secret = [0x5Au8; 136]; // use high-entropy bytes in practice
+/// let h = zenhash::xxh3_64_with_secret(b"data", &secret)?;
+/// assert_ne!(h, zenhash::xxh3_64(b"data"));
+/// # Ok::<(), whereat::At<zenhash::Error>>(())
+/// ```
 pub fn xxh3_64_with_secret(data: &[u8], secret: &[u8]) -> Result<u64, At<Error>> {
     let short = validate_secret(secret)?;
     Ok(if data.len() <= MID_SIZE_MAX {
@@ -610,6 +626,7 @@ pub fn xxh3_64_with_secret(data: &[u8], secret: &[u8]) -> Result<u64, At<Error>>
 /// ```
 /// assert_eq!(zenhash::xxh3_128(b""), 0x99AA_06D3_0147_98D8_6001_C324_468D_497F);
 /// ```
+#[must_use]
 pub fn xxh3_128(data: &[u8]) -> u128 {
     match data.len() {
         0..=16 => len_0to16_128(data, default_short_secret(), 0),
@@ -619,7 +636,10 @@ pub fn xxh3_128(data: &[u8]) -> u128 {
     }
 }
 
-/// Computes the 128-bit XXH3 hash of `data` with `seed`.
+/// Computes the 128-bit XXH3 hash of `data` with `seed`. Seed 0 gives the
+/// same value as [`xxh3_128`]. The low 64 bits differ from
+/// [`xxh3_64_with_seed`]'s result: the two are separate functions.
+#[must_use]
 pub fn xxh3_128_with_seed(data: &[u8], seed: u64) -> u128 {
     match data.len() {
         0..=16 => len_0to16_128(data, default_short_secret(), seed),
@@ -632,7 +652,8 @@ pub fn xxh3_128_with_seed(data: &[u8], seed: u64) -> u128 {
 }
 
 /// Computes the 128-bit XXH3 hash of `data` with a custom `secret` of at least
-/// [`XXH3_SECRET_SIZE_MIN`] bytes.
+/// [`XXH3_SECRET_SIZE_MIN`] bytes. Returns [`Error::SecretTooShort`] for a
+/// shorter secret.
 pub fn xxh3_128_with_secret(data: &[u8], secret: &[u8]) -> Result<u128, At<Error>> {
     let short = validate_secret(secret)?;
     Ok(if data.len() <= MID_SIZE_MAX {

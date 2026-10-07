@@ -25,7 +25,7 @@ const BUFFER_SIZE: usize = 256;
 /// assert_eq!(h.digest(), zenhash::xxh3_64(b"hello world"));
 /// assert_eq!(h.digest128(), zenhash::xxh3_128(b"hello world"));
 /// ```
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 pub struct Xxh3 {
     acc: [u64; 8],
     buffer: [u8; BUFFER_SIZE],
@@ -52,7 +52,13 @@ impl Xxh3 {
         Self::with_store(SecretStore::Default)
     }
 
-    /// Creates a hasher with `seed`.
+    /// Creates a hasher with `seed`. Seed 0 is the same as [`new`](Self::new).
+    ///
+    /// ```
+    /// let mut h = zenhash::Xxh3::with_seed(42);
+    /// h.update(b"data");
+    /// assert_eq!(h.digest(), zenhash::xxh3_64_with_seed(b"data", 42));
+    /// ```
     pub fn with_seed(seed: u64) -> Self {
         if seed == 0 {
             Self::new()
@@ -64,6 +70,15 @@ impl Xxh3 {
     /// Creates a hasher with a custom `secret` of at least
     /// [`XXH3_SECRET_SIZE_MIN`](crate::XXH3_SECRET_SIZE_MIN) bytes. The secret is
     /// copied.
+    ///
+    /// ```
+    /// let secret = [0x5Au8; 192]; // use high-entropy bytes in practice
+    /// let mut h = zenhash::Xxh3::with_secret(&secret)?;
+    /// h.update(b"data");
+    /// assert_eq!(h.digest(), zenhash::xxh3_64_with_secret(b"data", &secret)?);
+    /// assert!(zenhash::Xxh3::with_secret(&secret[..100]).is_err());
+    /// # Ok::<(), whereat::At<zenhash::Error>>(())
+    /// ```
     pub fn with_secret(secret: &[u8]) -> Result<Self, At<Error>> {
         validate_secret(secret)?;
         Ok(Self::with_store(SecretStore::Custom(secret.into())))
@@ -149,6 +164,7 @@ impl Xxh3 {
     }
 
     /// Returns the 64-bit hash of everything fed so far. Does not reset the state.
+    #[must_use]
     pub fn digest(&self) -> u64 {
         if self.total_len > MID_SIZE_MAX as u64 {
             finish_long_64(&self.long_acc(), self.secret.long_secret(), self.total_len)
@@ -158,6 +174,7 @@ impl Xxh3 {
     }
 
     /// Returns the 128-bit hash of everything fed so far. Does not reset the state.
+    #[must_use]
     pub fn digest128(&self) -> u128 {
         if self.total_len > MID_SIZE_MAX as u64 {
             finish_long_128(&self.long_acc(), self.secret.long_secret(), self.total_len)
@@ -175,6 +192,22 @@ impl Xxh3 {
     }
 }
 
+/// Shows the byte count and which kind of secret is in use, never the seed,
+/// the secret or buffered input.
+impl core::fmt::Debug for Xxh3 {
+    fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
+        let secret = match self.secret {
+            SecretStore::Default => "default",
+            SecretStore::Seeded(..) => "seeded",
+            SecretStore::Custom(_) => "custom",
+        };
+        f.debug_struct("Xxh3")
+            .field("total_len", &self.total_len)
+            .field("secret", &secret)
+            .finish_non_exhaustive()
+    }
+}
+
 impl Default for Xxh3 {
     /// Seed 0, default secret.
     fn default() -> Self {
@@ -182,6 +215,10 @@ impl Default for Xxh3 {
     }
 }
 
+/// `Hasher::write_u32` and the other integer methods feed the integer's
+/// native-endian bytes, and `Hash` impls for slices and strings add a length
+/// prefix of platform-dependent width. For hashes that must match across
+/// platforms or other xxHash implementations, feed bytes with `write`/`update`.
 impl core::hash::Hasher for Xxh3 {
     #[inline]
     fn write(&mut self, bytes: &[u8]) {

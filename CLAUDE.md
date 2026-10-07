@@ -43,6 +43,18 @@ implementation bit for bit on every target and SIMD tier.
 - **Custom secrets** are validated (>= 136 bytes) and returned as
   `At<Error>`; streaming copies the secret into a `Box<[u8]>`.
 
+## Public API decisions (audit 2026-10-07)
+
+- All three hashers: `new()`, `with_seed()`, `Default`, `Clone`, `Hasher`,
+  `io::Write` (std). Same shape on purpose.
+- `Debug` is hand-written: byte count and secret kind only. The derived one
+  printed custom secrets, seeds and buffered input.
+- `#[must_use]` on one-shot functions and `digest*`.
+- Not added (no current caller): seed + secret combined, secret generation,
+  `BuildHasher` types, canonical byte output, `const fn` hashing.
+- `Error::SecretTooShort { len }` is the only error; `Error` is
+  `#[non_exhaustive]`.
+
 ## Optimization log (dead ends and why)
 
 Bench host for these entries: Xeon family 6 model 207 (Emerald Rapids),

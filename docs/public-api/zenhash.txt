@@ -6,7 +6,7 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: zenhash.txt 36 lines (supported surface) | zenhash.features.txt 0 added (features: avx512,std) | zenhash.internal.txt 1 lines (1 hidden + 0 excluded-feature)
+# files: zenhash.txt 38 lines (supported surface) | zenhash.features.txt 0 added (features: avx512,std) | zenhash.internal.txt 1 lines (1 hidden + 0 excluded-feature)
 
 ## summary
 #
@@ -14,16 +14,16 @@
 #   pub types (struct/enum/trait/alias)         4
 #   pub consts/statics                          1
 #   free functions                              8
-#   inherent methods                           15
+#   inherent methods                           17
 #   struct fields                               1
 #   enum variants                               1
-#   trait roster entries (type × trait)        19
+#   trait roster entries (type × trait)        21
 #   auto-trait-complete types                   4
 #
 # per-module pub lines:
-#   (root)                           31
+#   (root)                           33
 
-## items (31 lines)
+## items (33 lines)
 
 pub mod zenhash
 #[non_exhaustive] pub enum Error
@@ -39,11 +39,13 @@ pub fn Xxh3::with_secret(&[u8]) -> core::result::Result<Self, whereat::at::At<Er
 pub fn Xxh3::with_seed(u64) -> Self
 pub struct Xxh32
 pub fn Xxh32::digest(&self) -> u32
+pub fn Xxh32::new() -> Self
 pub fn Xxh32::reset(&mut self)
 pub fn Xxh32::update(&mut self, &[u8])
 pub fn Xxh32::with_seed(u32) -> Self
 pub struct Xxh64
 pub fn Xxh64::digest(&self) -> u64
+pub fn Xxh64::new() -> Self
 pub fn Xxh64::reset(&mut self)
 pub fn Xxh64::update(&mut self, &[u8])
 pub fn Xxh64::with_seed(u64) -> Self
@@ -61,8 +63,8 @@ pub fn xxh64(&[u8], u64) -> u64
 
 Error: Clone, Debug, Display, Eq, Error, PartialEq
 Xxh3: Clone, Debug, Default, Hasher, Write
-Xxh32: Clone, Debug, Default, Hasher
-Xxh64: Clone, Debug, Default, Hasher
+Xxh32: Clone, Debug, Default, Hasher, Write
+Xxh64: Clone, Debug, Default, Hasher, Write
 
 ## auto traits
 
