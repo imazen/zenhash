@@ -27,6 +27,23 @@ implementation bit for bit on every target and SIMD tier.
 `just test-aarch64-qemu`, `just test-wasm`, `just bench`, `just bench-no-avx512`,
 `just ci`. Without wasmtime, Node's `node:wasi` works as a WASI runner.
 
+## CI workflows
+
+- `ci.yml`: test matrix (6 OSes incl. ARM Windows/Linux), i686 via cross,
+  wasm32 (wasmtime, +-simd128), no_std, MSRV, feature powerset, lint (incl.
+  aarch64/wasm clippy), package size, bench and fuzz compile, API snapshot,
+  coverage. Also `workflow_call`ed by `publish.yml`.
+- `fuzz.yml`: hash_parity on x86_64 and aarch64; 60 s per push to main,
+  600 s nightly, crash artifacts uploaded.
+- `examples/hash_file.rs`: streams a file through all four hashes.
+- `bench.yml`: zenbench on all 6 platforms on main / by hand
+  (`ZENHASH_BENCH` filter input); artifacts only, shared runners are noisy.
+- `publish.yml`: on a published GitHub release, checks tag == `v<version>`,
+  runs full CI at that commit, then `cargo publish` from the `crates-io`
+  environment (needs `CARGO_REGISTRY_TOKEN`).
+- `api-guard.yml`: zenutils' advisory PR comment with the API diff.
+- After the first publish, add a `cargo semver-checks` job.
+
 ## Design decisions
 
 - **Oracles:** tests compare against xxhash-rust and twox-hash (dev-deps only)

@@ -637,8 +637,9 @@ pub fn xxh3_128(data: &[u8]) -> u128 {
 }
 
 /// Computes the 128-bit XXH3 hash of `data` with `seed`. Seed 0 gives the
-/// same value as [`xxh3_128`]. The low 64 bits differ from
-/// [`xxh3_64_with_seed`]'s result: the two are separate functions.
+/// same value as [`xxh3_128`]. Do not truncate it in place of
+/// [`xxh3_64_with_seed`]: the low 64 bits match that function only for
+/// inputs of 1 to 3 bytes or over 240 bytes.
 #[must_use]
 pub fn xxh3_128_with_seed(data: &[u8], seed: u64) -> u128 {
     match data.len() {

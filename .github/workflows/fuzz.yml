@@ -1,0 +1,64 @@
+name: Fuzz
+
+# Nightly differential fuzzing (zenhash vs xxhash-rust, streaming vs one-shot).
+# Every push to main gets a short run; the schedule gets a longer one.
+on:
+  push:
+    branches: [main]
+  schedule:
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+    inputs:
+      duration:
+        description: 'Seconds per fuzz target'
+        required: false
+        default: '600'
+
+concurrency:
+  group: fuzz-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  fuzz:
+    name: Fuzz (${{ matrix.target }}, ${{ matrix.arch }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # aarch64 exercises the NEON tier, x86_64 the AVX-512/AVX2 tiers
+          # the runner has.
+          - { target: hash_parity, os: ubuntu-latest, arch: x86_64 }
+          - { target: hash_parity, os: ubuntu-24.04-arm, arch: aarch64 }
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@nightly
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: fuzz-${{ matrix.target }}-${{ matrix.arch }}
+          workspaces: fuzz
+      - uses: taiki-e/install-action@cargo-fuzz
+      - name: Determine duration
+        id: duration
+        run: |
+          case "${{ github.event_name }}" in
+            schedule) echo "seconds=600" >> "$GITHUB_OUTPUT" ;;
+            workflow_dispatch) echo "seconds=${{ github.event.inputs.duration || '600' }}" >> "$GITHUB_OUTPUT" ;;
+            *) echo "seconds=60" >> "$GITHUB_OUTPUT" ;;
+          esac
+      - name: Seed corpus from regression seeds
+        run: |
+          mkdir -p fuzz/corpus/${{ matrix.target }}
+          cp fuzz/regression/* fuzz/corpus/${{ matrix.target }}/
+      - name: Fuzz
+        run: |
+          cargo +nightly fuzz run ${{ matrix.target }} -- \
+            -max_total_time=${{ steps.duration.outputs.seconds }} \
+            -max_len=8192 -rss_limit_mb=2048
+      - name: Upload crashes
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: fuzz-crashes-${{ matrix.target }}-${{ matrix.arch }}
+          path: fuzz/artifacts/
+          retention-days: 30

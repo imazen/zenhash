@@ -176,3 +176,30 @@ fn hasher_integer_writes_are_native_endian_bytes() {
         zenhash::xxh3_64(&0x0102_0304_0506_0708u64.to_ne_bytes())
     );
 }
+
+/// Documented on `xxh3_128_with_seed`: the 128-bit low half equals the 64-bit
+/// hash only for inputs of 1..=3 bytes or over 240 bytes.
+#[test]
+fn xxh3_128_low_half_matches_64_only_where_documented() {
+    for len in (0..=240usize).filter(|l| !(1..=3).contains(l)) {
+        let d = test_bytes(len, 8);
+        assert_ne!(
+            zenhash::xxh3_128(&d) as u64,
+            zenhash::xxh3_64(&d),
+            "len {len}"
+        );
+    }
+    for len in [1usize, 2, 3, 241, 1000, 5000] {
+        let d = test_bytes(len, 8);
+        assert_eq!(
+            zenhash::xxh3_128(&d) as u64,
+            zenhash::xxh3_64(&d),
+            "len {len}"
+        );
+        assert_eq!(
+            zenhash::xxh3_128_with_seed(&d, 5) as u64,
+            zenhash::xxh3_64_with_seed(&d, 5),
+            "len {len}"
+        );
+    }
+}

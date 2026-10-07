@@ -15,7 +15,7 @@ exclude = [
     "/tests/**", "/benches/**", "/examples/**", "/fuzz/**", "/apidoc/**",
     "/docs/**", "/benchmarks/**", "/scripts/**", "/dev/**", "/tools/**",
     "/.github/**", "/.claude/**", "/.cargo/**", "/justfile", "/Cross.toml",
-    "/CLAUDE.md", "/AGENTS.md", "/*.log", "/*.sh", "/*.py",
+    "/CLAUDE.md", "/AGENTS.md", "/codecov.yml", "/*.log", "/*.sh", "/*.py",
     "/clippy.toml", "/deny.toml", "/_typos.toml", "/.gitignore",
 ]
 

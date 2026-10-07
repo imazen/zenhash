@@ -1,0 +1,51 @@
+name: Publish to crates.io
+
+# Runs when a GitHub release is published. The release tag must be
+# v<version> and match Cargo.toml; the full CI matrix runs at the release
+# commit before anything is published. Needs the `crates-io` environment
+# with a CARGO_REGISTRY_TOKEN secret.
+on:
+  release:
+    types: [published]
+
+env:
+  CARGO_TERM_COLOR: always
+
+jobs:
+  check-tag:
+    name: Check release tag
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+      - name: Tag matches Cargo.toml version
+        run: |
+          TAG="${{ github.event.release.tag_name }}"
+          VERSION=$(cargo metadata --no-deps --format-version 1 | jq -r '.packages[] | select(.name=="zenhash") | .version')
+          if [ "$TAG" != "v$VERSION" ]; then
+            echo "::error::release tag $TAG does not match Cargo.toml version v$VERSION"
+            exit 1
+          fi
+          echo "publishing zenhash $VERSION"
+
+  full-ci:
+    name: Full CI at the release commit
+    needs: check-tag
+    uses: ./.github/workflows/ci.yml
+    secrets: inherit
+
+  publish:
+    name: cargo publish
+    needs: [check-tag, full-ci]
+    runs-on: ubuntu-latest
+    environment: crates-io
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.sha }}
+      - uses: dtolnay/rust-toolchain@stable
+      - run: cargo publish --dry-run
+      - run: cargo publish
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CARGO_REGISTRY_TOKEN }}

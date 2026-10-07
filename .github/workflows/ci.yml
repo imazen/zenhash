@@ -6,6 +6,8 @@ on:
   pull_request:
     branches: [main]
   workflow_dispatch:
+  # publish.yml runs the whole matrix at the release commit.
+  workflow_call:
 
 # Key on github.ref (set for pushes and PRs) so a new push cancels the run it supersedes.
 concurrency:
@@ -141,6 +143,20 @@ jobs:
           size=$(stat -c %s target/package/*.crate)
           echo "crate tarball: $size bytes"
           test "$size" -le 60000
+
+  bench-build:
+    name: Bench compile (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, ubuntu-24.04-arm]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo bench --no-run
+      - run: cargo bench --no-run --no-default-features --features std
 
   fuzz-build:
     name: Fuzz targets compile
