@@ -54,6 +54,15 @@ Bench host for these entries: Xeon family 6 model 207 (Emerald Rapids),
   plus fixed-size chunk iterators with a constant `take(N)` bound: 10.9 ns.
   twox-hash solves the same problem with an inline-asm register barrier,
   which `forbid(unsafe_code)` rules out here.
+- Long-input loop, AVX2 asm per stripe: 18 vector ops + 7 scalar (bounds
+  check, and a `cmp`/`cmovb` from `key_at`'s unreachable fallback). Secret
+  `windows(64).step_by(8)` removed the check (still 7 scalar). A whole-block
+  fast path for 192-byte secrets (default and seed-derived) with constant key
+  offsets, unrolled 2 stripes per iteration, leaves 4 scalar per 2 stripes.
+  Together with `srli` for the hi->lo move (C uses a second `pshufd`, which
+  competes with the data-swap shuffle for one port on Intel): xxh3_64/64 KiB
+  went from 11-13% behind twox-hash to 4% ahead. Separate runs on this VM
+  drift +-4% relative to competitors, so judge changes by repeated runs.
 - zenbench's resource gate stalled the bench on this VM (13 s CPU in 20 min).
   Run with `--no-busy-gate` there.
 

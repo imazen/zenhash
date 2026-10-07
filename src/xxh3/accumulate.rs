@@ -48,6 +48,19 @@ pub(super) fn consume(
     )
 }
 
+/// Stripes per block under the default secret: (192 - 64) / 8.
+const DEFAULT_BLOCK_STRIPES: usize = 16;
+
+/// The secret as a fixed-size array when its blocks are 16 stripes long.
+#[inline(always)]
+fn default_block_keys(secret: &[u8], per_block: usize) -> Option<&[u8; 192]> {
+    if per_block == DEFAULT_BLOCK_STRIPES {
+        secret.first_chunk::<192>()
+    } else {
+        None
+    }
+}
+
 /// The block loop every tier shares. `$load`/`$store` move the accumulators
 /// between `[u64; 8]` and the tier's registers; `$accumulate` and `$scramble`
 /// take and return that register state.
@@ -59,15 +72,39 @@ macro_rules! consume_body {
         let mut state = $load($acc);
         let mut stripes = $stripes;
         while !stripes.is_empty() {
+            // Fast path: a whole block under a 192..=199-byte secret (the
+            // default and every seed-derived secret). Constant key offsets
+            // remove the per-stripe loop bookkeeping.
+            if *$so_far == 0 {
+                if let (Some((block, rest)), Some(keys)) = (
+                    stripes.split_first_chunk::<DEFAULT_BLOCK_STRIPES>(),
+                    default_block_keys($secret, per_block),
+                ) {
+                    // Two stripes per iteration halves the loop overhead.
+                    let (pairs, _) = block.as_chunks::<2>();
+                    for (i, [a, b]) in pairs.iter().enumerate() {
+                        let off = 2 * i * SECRET_CONSUME_RATE;
+                        state = $accumulate(state, a, key_at(keys, off));
+                        state = $accumulate(state, b, key_at(keys, off + SECRET_CONSUME_RATE));
+                    }
+                    state = $scramble(state, scramble_key);
+                    stripes = rest;
+                    continue;
+                }
+            }
             let n = (per_block - *$so_far).min(stripes.len());
             let (now, rest) = stripes.split_at(n);
-            let base = *$so_far * SECRET_CONSUME_RATE;
-            for (i, stripe) in now.iter().enumerate() {
-                state = $accumulate(
-                    state,
-                    stripe,
-                    key_at($secret, base + i * SECRET_CONSUME_RATE),
-                );
+            // Windows of exactly 64 bytes let LLVM drop the per-stripe
+            // bounds check that indexing needs. `first_chunk` on a window
+            // never fails, so the `else` is unreachable.
+            let keys = $secret[*$so_far * SECRET_CONSUME_RATE..]
+                .windows(STRIPE_LEN)
+                .step_by(SECRET_CONSUME_RATE);
+            for (stripe, key) in now.iter().zip(keys) {
+                let Some(key) = key.first_chunk::<STRIPE_LEN>() else {
+                    break;
+                };
+                state = $accumulate(state, stripe, key);
             }
             *$so_far += n;
             if *$so_far == per_block {
@@ -150,11 +187,15 @@ fn consume_scalar(
 mod x86 {
     use archmage::prelude::*;
 
-    use super::{SECRET_CONSUME_RATE, SECRET_LASTACC_START, STRIPE_LEN, key_at};
+    use super::{
+        DEFAULT_BLOCK_STRIPES, SECRET_CONSUME_RATE, SECRET_LASTACC_START, STRIPE_LEN,
+        default_block_keys, key_at,
+    };
     use crate::common::PRIME32_1;
 
-    // _MM_SHUFFLE(0, 3, 0, 1): moves each lane's high 32 bits into its low half.
-    const HI_TO_LO: i32 = 0b00_11_00_01;
+    // The high 32 bits of each 64-bit lane reach the low half for `mul_epu32`
+    // through a shift, not `shuffle_epi32` as in the C reference: the shift
+    // runs on a different port than the data-swap shuffle (see CLAUDE.md).
     // _MM_SHUFFLE(1, 0, 3, 2): swaps the two 64-bit halves of each 128-bit lane.
     const SWAP64: i32 = 0b01_00_11_10;
 
@@ -186,7 +227,7 @@ mod x86 {
         for i in 0..4 {
             let data_vec = _mm_loadu_si128(&data[i]);
             let data_key = _mm_xor_si128(data_vec, _mm_loadu_si128(&keys[i]));
-            let data_key_lo = _mm_shuffle_epi32::<HI_TO_LO>(data_key);
+            let data_key_lo = _mm_srli_epi64::<32>(data_key);
             let product = _mm_mul_epu32(data_key, data_key_lo);
             let data_swap = _mm_shuffle_epi32::<SWAP64>(data_vec);
             acc[i] = _mm_add_epi64(product, _mm_add_epi64(acc[i], data_swap));
@@ -201,7 +242,7 @@ mod x86 {
         for i in 0..4 {
             let shifted = _mm_xor_si128(acc[i], _mm_srli_epi64::<47>(acc[i]));
             let data_key = _mm_xor_si128(shifted, _mm_loadu_si128(&keys[i]));
-            let data_key_hi = _mm_shuffle_epi32::<HI_TO_LO>(data_key);
+            let data_key_hi = _mm_srli_epi64::<32>(data_key);
             let prod_lo = _mm_mul_epu32(data_key, prime);
             let prod_hi = _mm_mul_epu32(data_key_hi, prime);
             acc[i] = _mm_add_epi64(prod_lo, _mm_slli_epi64::<32>(prod_hi));
@@ -254,7 +295,7 @@ mod x86 {
         for i in 0..2 {
             let data_vec = _mm256_loadu_si256(&data[i]);
             let data_key = _mm256_xor_si256(data_vec, _mm256_loadu_si256(&keys[i]));
-            let data_key_lo = _mm256_shuffle_epi32::<HI_TO_LO>(data_key);
+            let data_key_lo = _mm256_srli_epi64::<32>(data_key);
             let product = _mm256_mul_epu32(data_key, data_key_lo);
             let data_swap = _mm256_shuffle_epi32::<SWAP64>(data_vec);
             acc[i] = _mm256_add_epi64(product, _mm256_add_epi64(acc[i], data_swap));
@@ -269,7 +310,7 @@ mod x86 {
         for i in 0..2 {
             let shifted = _mm256_xor_si256(acc[i], _mm256_srli_epi64::<47>(acc[i]));
             let data_key = _mm256_xor_si256(shifted, _mm256_loadu_si256(&keys[i]));
-            let data_key_hi = _mm256_shuffle_epi32::<HI_TO_LO>(data_key);
+            let data_key_hi = _mm256_srli_epi64::<32>(data_key);
             let prod_lo = _mm256_mul_epu32(data_key, prime);
             let prod_hi = _mm256_mul_epu32(data_key_hi, prime);
             acc[i] = _mm256_add_epi64(prod_lo, _mm256_slli_epi64::<32>(prod_hi));
@@ -318,7 +359,7 @@ mod x86 {
     fn accumulate_v4(acc: __m512i, stripe: &[u8; 64], key: &[u8; 64]) -> __m512i {
         let data_vec = _mm512_loadu_si512(stripe);
         let data_key = _mm512_xor_si512(data_vec, _mm512_loadu_si512(key));
-        let data_key_lo = _mm512_shuffle_epi32::<HI_TO_LO>(data_key);
+        let data_key_lo = _mm512_srli_epi64::<32>(data_key);
         let product = _mm512_mul_epu32(data_key, data_key_lo);
         let data_swap = _mm512_shuffle_epi32::<SWAP64>(data_vec);
         _mm512_add_epi64(product, _mm512_add_epi64(acc, data_swap))
@@ -334,7 +375,7 @@ mod x86 {
             _mm512_srli_epi64::<47>(acc),
             _mm512_loadu_si512(key),
         );
-        let data_key_hi = _mm512_shuffle_epi32::<HI_TO_LO>(data_key);
+        let data_key_hi = _mm512_srli_epi64::<32>(data_key);
         let prod_lo = _mm512_mul_epu32(data_key, prime);
         let prod_hi = _mm512_mul_epu32(data_key_hi, prime);
         _mm512_add_epi64(prod_lo, _mm512_slli_epi64::<32>(prod_hi))
@@ -374,7 +415,10 @@ use x86::*;
 mod arm {
     use archmage::prelude::*;
 
-    use super::{SECRET_CONSUME_RATE, SECRET_LASTACC_START, STRIPE_LEN, key_at};
+    use super::{
+        DEFAULT_BLOCK_STRIPES, SECRET_CONSUME_RATE, SECRET_LASTACC_START, STRIPE_LEN,
+        default_block_keys, key_at,
+    };
     use crate::common::PRIME32_1;
 
     #[rite(neon, import_intrinsics)]
@@ -464,7 +508,10 @@ use arm::*;
 mod wasm {
     use archmage::prelude::*;
 
-    use super::{SECRET_CONSUME_RATE, SECRET_LASTACC_START, STRIPE_LEN, key_at};
+    use super::{
+        DEFAULT_BLOCK_STRIPES, SECRET_CONSUME_RATE, SECRET_LASTACC_START, STRIPE_LEN,
+        default_block_keys, key_at,
+    };
     use crate::common::PRIME32_1;
 
     #[rite(wasm128, import_intrinsics)]
