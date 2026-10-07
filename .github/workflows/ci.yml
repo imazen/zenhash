@@ -140,7 +140,7 @@ jobs:
         run: |
           size=$(stat -c %s target/package/*.crate)
           echo "crate tarball: $size bytes"
-          test "$size" -le 100000
+          test "$size" -le 60000
 
   fuzz-build:
     name: Fuzz targets compile
