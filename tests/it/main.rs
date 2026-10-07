@@ -1,5 +1,6 @@
 // One integration-test binary: every top-level file in tests/ links
 // separately, so new test files go here as modules.
+mod fuzz_regression;
 mod oracle;
 mod tiers;
 mod vectors;

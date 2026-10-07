@@ -1,4 +1,6 @@
-# zenhash [![CI](https://img.shields.io/github/actions/workflow/status/imazen/zenhash/ci.yml?style=flat-square&label=CI)](https://github.com/imazen/zenhash/actions/workflows/ci.yml) [![crates.io](https://img.shields.io/crates/v/zenhash?style=flat-square)](https://crates.io/crates/zenhash) [![lib.rs](https://img.shields.io/crates/v/zenhash?style=flat-square&label=lib.rs&color=blue)](https://lib.rs/crates/zenhash) [![docs.rs](https://img.shields.io/docsrs/zenhash?style=flat-square)](https://docs.rs/zenhash) [![license](https://img.shields.io/crates/l/zenhash?style=flat-square)](#license) [![MSRV](https://img.shields.io/badge/MSRV-1.89-blue?style=flat-square)](https://github.com/imazen/zenhash/blob/main/Cargo.toml)
+<!-- GENERATED FROM README.md by zenutils gen-readme-crates.sh — DO NOT EDIT. -->
+
+# zenhash
 
 zenhash is an implementation of the xxHash family (XXH3 64/128, XXH64, XXH32) in safe Rust, with runtime SIMD dispatch for XXH3.
 
@@ -94,11 +96,6 @@ the tests on x86-64 and aarch64 Linux, Windows and macOS, i686, and
 wasm32-wasip1 with and without SIMD128. A differential fuzz target lives in
 `fuzz/`.
 
-<!-- crates.io:skip-start -->
-## Benchmarks
-
-None committed yet.
-<!-- crates.io:skip-end -->
 
 ## License
 

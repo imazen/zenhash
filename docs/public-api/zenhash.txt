@@ -1,0 +1,69 @@
+# zenhash public API — supported surface (default features)
+# (regenerated on every `cargo test` by zenutils-apidoc; ZEN_API_DOC=check verifies, =off skips).
+# Encodings: crate-name prefix stripped; auto traits collapse to a
+# count + exceptions; trait impls collapse to one roster line per
+# type (method signatures live at the trait definition); blanket
+# impls omitted; re-export duplicates annotated `[also: path]`.
+# DO NOT EDIT BY HAND — commit regenerated changes with the code.
+#
+# files: zenhash.txt 36 lines (supported surface) | zenhash.features.txt 0 added (features: avx512,std) | zenhash.internal.txt 1 lines (1 hidden + 0 excluded-feature)
+
+## summary
+#
+#   pub modules                                 1
+#   pub types (struct/enum/trait/alias)         4
+#   pub consts/statics                          1
+#   free functions                              8
+#   inherent methods                           15
+#   struct fields                               1
+#   enum variants                               1
+#   trait roster entries (type × trait)        19
+#   auto-trait-complete types                   4
+#
+# per-module pub lines:
+#   (root)                           31
+
+## items (31 lines)
+
+pub mod zenhash
+#[non_exhaustive] pub enum Error
+pub Error::SecretTooShort
+pub Error::SecretTooShort::len: usize
+pub struct Xxh3
+pub fn Xxh3::digest(&self) -> u64
+pub fn Xxh3::digest128(&self) -> u128
+pub fn Xxh3::new() -> Self
+pub fn Xxh3::reset(&mut self)
+pub fn Xxh3::update(&mut self, &[u8])
+pub fn Xxh3::with_secret(&[u8]) -> core::result::Result<Self, whereat::at::At<Error>>
+pub fn Xxh3::with_seed(u64) -> Self
+pub struct Xxh32
+pub fn Xxh32::digest(&self) -> u32
+pub fn Xxh32::reset(&mut self)
+pub fn Xxh32::update(&mut self, &[u8])
+pub fn Xxh32::with_seed(u32) -> Self
+pub struct Xxh64
+pub fn Xxh64::digest(&self) -> u64
+pub fn Xxh64::reset(&mut self)
+pub fn Xxh64::update(&mut self, &[u8])
+pub fn Xxh64::with_seed(u64) -> Self
+pub const XXH3_SECRET_SIZE_MIN: usize
+pub fn xxh32(&[u8], u32) -> u32
+pub fn xxh3_128(&[u8]) -> u128
+pub fn xxh3_128_with_secret(&[u8], &[u8]) -> core::result::Result<u128, whereat::at::At<Error>>
+pub fn xxh3_128_with_seed(&[u8], u64) -> u128
+pub fn xxh3_64(&[u8]) -> u64
+pub fn xxh3_64_with_secret(&[u8], &[u8]) -> core::result::Result<u64, whereat::at::At<Error>>
+pub fn xxh3_64_with_seed(&[u8], u64) -> u64
+pub fn xxh64(&[u8], u64) -> u64
+
+## trait impls (4 types)
+
+Error: Clone, Debug, Display, Eq, Error, PartialEq
+Xxh3: Clone, Debug, Default, Hasher, Write
+Xxh32: Clone, Debug, Default, Hasher
+Xxh64: Clone, Debug, Default, Hasher
+
+## auto traits
+
+4 types implement all of: Freeze, RefUnwindSafe, Send, Sync, Unpin, UnwindSafe

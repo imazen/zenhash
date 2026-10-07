@@ -33,3 +33,8 @@ pub use xxh3::{
 };
 pub use xxh32::{Xxh32, xxh32};
 pub use xxh64::{Xxh64, xxh64};
+
+/// Runs the README's code blocks as doctests.
+#[cfg(doctest)]
+#[doc = include_str!("../README.md")]
+struct ReadmeDoctests;

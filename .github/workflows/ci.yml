@@ -1,0 +1,198 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+# Key on github.ref (set for pushes and PRs) so a new push cancels the run it supersedes.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  CARGO_TERM_COLOR: always
+  RUSTFLAGS: -D warnings
+
+jobs:
+  test:
+    name: Test (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os:
+          - ubuntu-latest
+          - ubuntu-24.04-arm
+          - windows-latest
+          - windows-11-arm
+          - macos-latest
+          - macos-26-intel
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo test
+      - run: cargo test --no-default-features
+      # --all-features includes `avx512` and `_dev`, so the tier-permutation
+      # test also disables tiers the target guarantees at compile time.
+      - run: cargo test --all-features
+
+  i686:
+    name: Test (i686-unknown-linux-gnu, cross)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: i686-unknown-linux-gnu
+      - uses: taiki-e/install-action@cross
+      - uses: Swatinem/rust-cache@v2
+        with:
+          key: cross-i686
+      - run: cross test --target i686-unknown-linux-gnu
+      - run: cross test --target i686-unknown-linux-gnu --no-default-features
+
+  wasm:
+    name: WASM (wasm32-unknown-unknown check, wasm32-wasip1 tests)
+    runs-on: ubuntu-latest
+    env:
+      # Preopen the checkout at its own path so tests that read files via
+      # CARGO_MANIFEST_DIR (the fuzz regression seeds) can see them.
+      CARGO_TARGET_WASM32_WASIP1_RUNNER: wasmtime --dir=${{ github.workspace }}::${{ github.workspace }}
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: wasm32-unknown-unknown, wasm32-wasip1
+      - uses: taiki-e/install-action@wasmtime
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo check --target wasm32-unknown-unknown --no-default-features
+      - run: cargo test --target wasm32-wasip1 --lib --tests
+      - run: cargo test --target wasm32-wasip1 --lib --tests
+        env:
+          RUSTFLAGS: -D warnings -Ctarget-feature=+simd128
+
+  no-std:
+    name: no_std (thumbv7em-none-eabihf)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          targets: thumbv7em-none-eabihf
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo check --target thumbv7em-none-eabihf --no-default-features
+
+  msrv:
+    name: MSRV (rust-version from Cargo.toml)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: taiki-e/install-action@cargo-hack
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo hack check --rust-version
+
+  features:
+    name: Feature powerset
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: taiki-e/install-action@cargo-hack
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo hack check --feature-powerset --no-dev-deps
+
+  lint:
+    name: fmt, clippy, docs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: clippy, rustfmt
+          targets: aarch64-unknown-linux-gnu, wasm32-unknown-unknown
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo fmt --all -- --check
+      - run: cargo clippy --all-targets --all-features -- -D warnings
+      - run: cargo clippy --all-targets --no-default-features -- -D warnings
+      # The NEON and WASM tiers never compile on an x86 host.
+      - run: cargo clippy --all-targets --all-features --target aarch64-unknown-linux-gnu -- -D warnings
+      - run: cargo clippy --lib --no-default-features --target wasm32-unknown-unknown -- -D warnings
+        env:
+          RUSTFLAGS: -D warnings -Ctarget-feature=+simd128
+      - run: cargo doc --no-deps --all-features
+        env:
+          RUSTDOCFLAGS: -D warnings
+
+  package:
+    name: cargo package (builds the tarball crates.io would get)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo package
+      - name: Size budget
+        run: |
+          size=$(stat -c %s target/package/*.crate)
+          echo "crate tarball: $size bytes"
+          test "$size" -le 100000
+
+  fuzz-build:
+    name: Fuzz targets compile
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: fuzz
+      - run: cargo check --all-targets
+        working-directory: fuzz
+
+  api-doc:
+    name: Public-API snapshot is current
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: dtolnay/rust-toolchain@nightly # rustdoc JSON needs nightly
+      - run: rustup default stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: apidoc
+      - run: cargo test --manifest-path apidoc/Cargo.toml
+        env:
+          ZEN_API_DOC: check
+
+  coverage:
+    name: Coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+        with:
+          components: llvm-tools-preview
+      - uses: taiki-e/install-action@cargo-llvm-cov
+      - uses: Swatinem/rust-cache@v2
+      - run: cargo llvm-cov --all-features --lcov --output-path lcov.info
+      - uses: codecov/codecov-action@v7
+        continue-on-error: true
+        with:
+          files: lcov.info
+          fail_ci_if_error: false
+        env:
+          CODECOV_TOKEN: ${{ secrets.CODECOV_TOKEN }}
+
+  deny:
+    name: cargo deny (advisory)
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+      - uses: taiki-e/install-action@cargo-deny
+      - run: cargo deny check
