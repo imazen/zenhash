@@ -69,8 +69,16 @@ Bench host for these entries: Xeon family 6 model 207 (Emerald Rapids),
   both. Partial blocks (every streaming update leaves the block position
   non-zero) use a masked key index `(k & 15) * 8` under 192-byte secrets, so
   no bounds check. 4 KiB updates remain 1.4-3.7% behind twox-hash.
+- XXH32/XXH64 at 16 B: 2-9% behind both competitors. The asm matches
+  xxhash-rust's nearly instruction for instruction (we add a `push rbx` and a
+  mask); not chased further.
 - zenbench's resource gate stalled the bench on this VM (13 s CPU in 20 min).
   Run with `--no-busy-gate` there.
+
+## Fuzzing log
+
+- 2026-10-07: `hash_parity`, 600 s, 11,283,109 runs, `-max_len=8192`, no
+  findings (AVX2 tier; host had AVX-512 but the `avx512` feature was off).
 
 ## Known Bugs
 
