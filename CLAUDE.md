@@ -46,6 +46,8 @@ implementation bit for bit on every target and SIMD tier.
 
 ## Design decisions
 
+- **Tier test isolation:** `tests/tiers.rs` is its own test binary (process)
+  because tier disabling is process-wide; keep other tests out of it.
 - **Oracles:** tests compare against xxhash-rust and twox-hash (dev-deps only)
   across all path boundaries, seeds, secret sizes 136..1000 and streaming
   splits. The fuzz target (`fuzz/fuzz_targets/hash_parity_core.rs`) does the
@@ -122,6 +124,25 @@ Bench host for these entries: Xeon family 6 model 207 (Emerald Rapids),
   mask); not chased further.
 - zenbench's resource gate stalled the bench on this VM (13 s CPU in 20 min).
   Run with `--no-busy-gate` there.
+
+## Test coverage log
+
+- 2026-10-07, `cargo llvm-cov --all-features`: 99.57% lines, 100% functions.
+  Uncovered: the big-endian early return (covered on s390x in CI, not in
+  the x86 coverage run), the unreachable `key_at` fallback, the fuzz body's
+  short-input return (seed added).
+- 2026-10-07, `cargo mutants --all-features` (598 mutants, 15 min): 545
+  caught, 23 unviable, 2 timeouts (infinite recursion, i.e. caught), 28
+  missed. Missed and equivalent: 8 `|`->`^` on disjoint bits, 4 `seed == 0`
+  fast-path guards, `default_block_keys -> None` (fast path off, same
+  result), 3 `>`->`>=` buffer-flush conditions in streaming (same digest).
+  Missed because not compiled on x86: 11 NEON/WASM tier functions (CI runs
+  those tiers on ARM runners and wasmtime). One real gap: a broken scalar
+  kernel (`acc[i ^ 1]` -> `acc[i | 1]`) survived because the tier test ran
+  in the shared test binary, where `for_each_token_permutation`'s
+  process-wide tier disabling raced with parallel tests. It now lives in
+  its own binary, `tests/tiers.rs`, and catches that mutant every run.
+  Re-run: `just mutants`.
 
 ## Fuzzing log
 

@@ -84,6 +84,28 @@ bench *ARGS:
 bench-no-avx512 *ARGS:
     cargo bench --bench hash --no-default-features --features std {{ARGS}}
 
+# Adversarial: every competitor (incl. the C reference) built for this exact
+# CPU with fat LTO; zenhash gets the same flags. See benches/adversarial.rs.
+bench-adversarial *ARGS:
+    RUSTFLAGS="-C target-cpu=native" CFLAGS="-O3 -march=native" \
+    CARGO_PROFILE_BENCH_LTO=fat CARGO_PROFILE_BENCH_CODEGEN_UNITS=1 \
+    cargo bench --bench adversarial {{ARGS}}
+
+# Same competitor setup, but zenhash as shipped: runtime dispatch only
+# (C still gets -march=native through CFLAGS; Rust crates get no native flags).
+bench-adversarial-shipped *ARGS:
+    CFLAGS="-O3 -march=native" \
+    CARGO_PROFILE_BENCH_LTO=fat CARGO_PROFILE_BENCH_CODEGEN_UNITS=1 \
+    cargo bench --bench adversarial {{ARGS}}
+
+# Mutation testing (cargo install cargo-mutants); results in mutants.out/
+mutants *ARGS:
+    cargo mutants --all-features -j 2 {{ARGS}}
+
+# Line/function coverage (cargo install cargo-llvm-cov)
+coverage:
+    cargo llvm-cov --all-features --summary-only
+
 # Regenerate README.crates.md from README.md (never edit README.crates.md by hand)
 readme:
     @z="{{ZENUTILS}}"; [ -f "$z/scripts/gen-readme-crates.sh" ] || z="{{justfile_directory()}}/.quality-kit"; \

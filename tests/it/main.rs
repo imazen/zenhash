@@ -4,7 +4,6 @@ mod api;
 mod fuzz_regression;
 mod oracle;
 mod random;
-mod tiers;
 mod vectors;
 
 /// Deterministic test bytes (splitmix64), so failures reproduce.

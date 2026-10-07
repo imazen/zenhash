@@ -41,6 +41,8 @@ xxhash-rust = { version = "0.8.19", features = ["xxh3", "xxh32", "xxh64"] }
 
 [target.'cfg(not(target_arch = "wasm32"))'.dev-dependencies]
 zenbench = "0.1.10"
+# The C reference (xxHash 0.8.3 via xxhash-c-sys 0.8.7), for benches/adversarial.rs.
+xxhash-c = "0.8.2"
 
 [lints.rust]
 unsafe_code = "forbid"
@@ -55,6 +57,10 @@ opt-level = 2
 
 [[bench]]
 name = "hash"
+harness = false
+
+[[bench]]
+name = "adversarial"
 harness = false
 
 [[example]]
