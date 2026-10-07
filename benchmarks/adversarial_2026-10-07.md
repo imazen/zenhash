@@ -57,13 +57,20 @@ is several percent; compare within a table.
 
 ```sh
 git clone https://github.com/imazen/zenhash && cd zenhash
-git checkout 383409ca3fc5dc966e316db4a1c6f7d6c6e0dd6d   # full tables below
+git checkout ce2bbdf   # squash merge of #1; see note below
 just bench-adversarial            # config A
 just bench-adversarial-shipped    # config B
 # one group: just bench-adversarial -- --no-busy-gate  with ZENHASH_BENCH=xxh3_64/241
 ```
 
 ## Results
+
+The numbers were measured on pre-squash commits of #1 (2da9a29 for
+`xxhash`, 383409c and 099246d for `adversarial`), which no longer exist on
+GitHub. ce2bbdf contains those changes plus later ones; later changes that
+affect these numbers are listed in CHANGELOG.md and CLAUDE.md, so expect
+small differences when re-running.
+
 
 Percentages: zenbench's paired 95% CI of the competitor's mean time
 relative to zenhash (positive = competitor slower).
