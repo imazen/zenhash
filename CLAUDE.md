@@ -168,6 +168,16 @@ Bench host for these entries: Xeon family 6 model 207 (Emerald Rapids),
 - 2026-10-07: `hash_parity`, 600 s, 11,283,109 runs, `-max_len=8192`, no
   findings (AVX2 tier; host had AVX-512 but the `avx512` feature was off).
 
+## Open performance issues
+
+- `-C target-cpu=native` makes XXH64/XXH32 about 2x slower at 64 KiB (all
+  three Rust crates; C is unaffected): LLVM vectorizes the four independent
+  64-bit lanes into AVX-512 `vpmullq`. C blocks it with an inline-asm
+  barrier, which forbid(unsafe_code) rules out. Needs a safe formulation
+  the SLP vectorizer won't pack (see benchmarks/adversarial_2026-10-07.md).
+- 241 B+: C at -march=native is 8-44% faster; same instruction count, so
+  latency. No PMU in the dev VM to dig further.
+
 ## Known Bugs
 
 None open.

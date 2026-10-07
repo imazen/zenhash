@@ -128,6 +128,12 @@ Default build (AVX-512 tier on this CPU):
 On a CPU without AVX-512 (AVX2 tier, measured with the feature off): 64 KiB
 at 32.3 GiB/s, within 3.5% of twox-hash and 53-54% faster than xxhash-rust.
 
+An adversarial run, where every competitor (including the C reference,
+xxHash 0.8.3) is compiled for this exact CPU with fat LTO, is in
+[benchmarks/adversarial_2026-10-07.md](https://github.com/imazen/zenhash/blob/main/benchmarks/adversarial_2026-10-07.md).
+There the C library built with `-march=native` is 8-44% faster than zenhash
+from 241 B up, and xxhash-rust's compile-time AVX-512 path 5-15% faster.
+
 Percentages are zenbench's 95% confidence intervals of each competitor's
 time relative to zenhash's. Where zenhash loses or ties: XXH32 and XXH64 at
 16 bytes (2-15% slower), XXH3 below 64 bytes (within about 10% of
