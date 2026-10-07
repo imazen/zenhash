@@ -35,3 +35,4 @@ heaptrack.*.zst
 callgrind.out.*
 cachegrind.out.*
 massif.out.*
+mutants.out*/
