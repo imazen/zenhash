@@ -178,6 +178,12 @@ Bench host for these entries: Xeon family 6 model 207 (Emerald Rapids),
 - 241 B+: C at -march=native is 8-44% faster; same instruction count, so
   latency. No PMU in the dev VM to dig further.
 
+## History
+
+#1 was squash-merged (ce2bbdf). Its 20 original commits, which the
+optimization log, CHANGELOG and benchmark reports cite by hash, are kept
+on the `archive/squashed-pr1` branch.
+
 ## Known Bugs
 
 None open.
