@@ -207,21 +207,32 @@ fn len_17to128_64(input: &[u8], secret: &ShortSecret, seed: u64) -> u64 {
     avalanche(acc)
 }
 
-#[inline(never)]
+/// [`mix16`] on a fixed 16-byte chunk; with constant `s` the secret reads fold.
+#[inline(always)]
+fn mix16_chunk(chunk: &[u8; 16], secret: &[u8], s: usize, seed: u64) -> u64 {
+    mix16(chunk, 0, secret, s, seed)
+}
+
+// The mid-size paths iterate fixed-size chunks with a constant trip-count
+// bound (`take`), so LLVM unrolls them, folds the secret offsets and drops the
+// bounds checks. Indexed loops here were measured 25% slower (see CLAUDE.md).
+#[inline(always)]
 fn len_129to240_64(input: &[u8], secret: &ShortSecret, seed: u64) -> u64 {
     let len = input.len();
-    let rounds = len / 16;
     let mut acc = (len as u64).wrapping_mul(PRIME64_1);
-    for i in 0..8 {
-        acc = acc.wrapping_add(mix16(input, 16 * i, secret, 16 * i, seed));
+    let (head, tail) = input.split_at(128);
+    let (head, _) = head.as_chunks::<16>();
+    for (i, chunk) in head.iter().enumerate().take(8) {
+        acc = acc.wrapping_add(mix16_chunk(chunk, secret, 16 * i, seed));
     }
     acc = avalanche(acc);
-    for i in 8..rounds {
-        acc = acc.wrapping_add(mix16(
-            input,
-            16 * i,
+    // len <= 240 leaves at most (240 - 128) / 16 = 7 whole chunks.
+    let (tail, _) = tail.as_chunks::<16>();
+    for (i, chunk) in tail.iter().enumerate().take(7) {
+        acc = acc.wrapping_add(mix16_chunk(
+            chunk,
             secret,
-            16 * (i - 8) + MIDSIZE_STARTOFFSET,
+            16 * i + MIDSIZE_STARTOFFSET,
             seed,
         ));
     }
@@ -364,18 +375,28 @@ fn len_17to128_128(input: &[u8], secret: &ShortSecret, seed: u64) -> u128 {
     finish_mid_128(acc, len, seed)
 }
 
-#[inline(never)]
+#[inline(always)]
 fn len_129to240_128(input: &[u8], secret: &ShortSecret, seed: u64) -> u128 {
     let len = input.len();
-    let rounds = len / 32;
     let mut acc = ((len as u64).wrapping_mul(PRIME64_1), 0u64);
-    for i in 0..4 {
-        acc = mix32b(acc, input, 32 * i, 32 * i + 16, secret, 32 * i, seed);
+    let (head, tail) = input.split_at(128);
+    let (head, _) = head.as_chunks::<32>();
+    for (i, chunk) in head.iter().enumerate().take(4) {
+        acc = mix32b(acc, chunk, 0, 16, secret, 32 * i, seed);
     }
     acc = (avalanche(acc.0), avalanche(acc.1));
-    for i in 4..rounds {
-        let s = MIDSIZE_STARTOFFSET + 32 * (i - 4);
-        acc = mix32b(acc, input, 32 * i, 32 * i + 16, secret, s, seed);
+    // len <= 240 leaves at most (240 - 128) / 32 = 3 whole chunks.
+    let (tail, _) = tail.as_chunks::<32>();
+    for (i, chunk) in tail.iter().enumerate().take(3) {
+        acc = mix32b(
+            acc,
+            chunk,
+            0,
+            16,
+            secret,
+            MIDSIZE_STARTOFFSET + 32 * i,
+            seed,
+        );
     }
     acc = mix32b(
         acc,

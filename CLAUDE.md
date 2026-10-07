@@ -42,6 +42,21 @@ implementation bit for bit on every target and SIMD tier.
 - **Custom secrets** are validated (>= 136 bytes) and returned as
   `At<Error>`; streaming copies the secret into a `Box<[u8]>`.
 
+## Optimization log (dead ends and why)
+
+Bench host for these entries: Xeon family 6 model 207 (Emerald Rapids),
+4 vCPU VM, rustc 1.97.0, `cargo bench --bench hash -- --no-busy-gate`.
+
+- 129..=240 paths: an `#[inline(never)]` function with an indexed
+  `for i in 8..rounds` loop let LLVM's SLP vectorizer pack the 64-bit
+  xor/add pairs into SSE registers (unpack + stack spills around every
+  `mulq`): 21.1 ns at 240 B. Inlining (default secret folds into immediates)
+  plus fixed-size chunk iterators with a constant `take(N)` bound: 10.9 ns.
+  twox-hash solves the same problem with an inline-asm register barrier,
+  which `forbid(unsafe_code)` rules out here.
+- zenbench's resource gate stalled the bench on this VM (13 s CPU in 20 min).
+  Run with `--no-busy-gate` there.
+
 ## Known Bugs
 
 None open.
