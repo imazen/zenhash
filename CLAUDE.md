@@ -69,6 +69,17 @@ Bench host for these entries: Xeon family 6 model 207 (Emerald Rapids),
   both. Partial blocks (every streaming update leaves the block position
   non-zero) use a masked key index `(k & 15) * 8` under 192-byte secrets, so
   no bounds check. 4 KiB updates remain 1.4-3.7% behind twox-hash.
+- Entry-point prologue: inlining the 129..=240 and long paths into
+  `xxh3_64` gave it `push`/`push`/`sub rsp` on every call; 8 B went from
+  10-16% faster than xxhash-rust to 18% slower and 16 B to 29% slower. Fix:
+  entry points inline only the <= 128 B paths and call `#[inline(never)]`
+  helpers that hard-code the default secret (still folded to immediates).
+- Mid-size paths and the SLP vectorizer: the u64-xor form vectorizes when the
+  seed is a runtime value; a u128-xor form vectorizes (pxor + extracts) when
+  the key is constant. `mix16_chunk::<U128_KEY>` picks per caller, with
+  separate seed-0 and seeded helpers. Check `xmm` counts in the asm of
+  `mid_64_*` / `mid_128_*` after touching them. Result at 240 B:
+  xxh3_64 26-31%, seeded 10-14% faster than twox-hash, 128-bit tied.
 - XXH32/XXH64 at 16 B: 2-9% behind both competitors. The asm matches
   xxhash-rust's nearly instruction for instruction (we add a `push rbx` and a
   mask); not chased further.

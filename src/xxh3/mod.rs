@@ -208,28 +208,45 @@ fn len_17to128_64(input: &[u8], secret: &ShortSecret, seed: u64) -> u64 {
 }
 
 /// [`mix16`] on a fixed 16-byte chunk; with constant `s` the secret reads fold.
+/// [`mix16`] on a fixed 16-byte chunk; with constant `s` the secret reads fold.
+///
+/// `U128_KEY` picks how the key xor is written, and each mid-size caller uses
+/// the form LLVM compiles to scalar code (see CLAUDE.md):
+/// - seed 0 (`false`): two u64 xors with immediates. As one u128 xor against
+///   a constant, LLVM emits `pxor` plus lane extracts instead.
+/// - runtime seed (`true`): one u128 xor. With two u64 xors, the SLP
+///   vectorizer packs the `(s + seed, s - seed)` pairs into SSE registers; it
+///   runs before i128 is split into two registers, so a u128 gives it no
+///   pair to pack.
 #[inline(always)]
-fn mix16_chunk(chunk: &[u8; 16], secret: &[u8], s: usize, seed: u64) -> u64 {
-    mix16(chunk, 0, secret, s, seed)
+fn mix16_chunk<const U128_KEY: bool>(chunk: &[u8; 16], secret: &[u8], s: usize, seed: u64) -> u64 {
+    if U128_KEY {
+        let key = u128::from(r64(secret, s).wrapping_add(seed))
+            | (u128::from(r64(secret, s + 8).wrapping_sub(seed)) << 64);
+        let x = u128::from_le_bytes(*chunk) ^ key;
+        mul128_fold64(x as u64, (x >> 64) as u64)
+    } else {
+        mix16(chunk, 0, secret, s, seed)
+    }
 }
 
 // The mid-size paths iterate fixed-size chunks with a constant trip-count
 // bound (`take`), so LLVM unrolls them, folds the secret offsets and drops the
 // bounds checks. Indexed loops here were measured 25% slower (see CLAUDE.md).
 #[inline(always)]
-fn len_129to240_64(input: &[u8], secret: &ShortSecret, seed: u64) -> u64 {
+fn len_129to240_64<const U128_KEY: bool>(input: &[u8], secret: &ShortSecret, seed: u64) -> u64 {
     let len = input.len();
     let mut acc = (len as u64).wrapping_mul(PRIME64_1);
     let (head, tail) = input.split_at(128);
     let (head, _) = head.as_chunks::<16>();
     for (i, chunk) in head.iter().enumerate().take(8) {
-        acc = acc.wrapping_add(mix16_chunk(chunk, secret, 16 * i, seed));
+        acc = acc.wrapping_add(mix16_chunk::<U128_KEY>(chunk, secret, 16 * i, seed));
     }
     acc = avalanche(acc);
     // len <= 240 leaves at most (240 - 128) / 16 = 7 whole chunks.
     let (tail, _) = tail.as_chunks::<16>();
     for (i, chunk) in tail.iter().enumerate().take(7) {
-        acc = acc.wrapping_add(mix16_chunk(
+        acc = acc.wrapping_add(mix16_chunk::<U128_KEY>(
             chunk,
             secret,
             16 * i + MIDSIZE_STARTOFFSET,
@@ -251,7 +268,7 @@ fn short_64(input: &[u8], secret: &ShortSecret, seed: u64) -> u64 {
     match input.len() {
         0..=16 => len_0to16_64(input, secret, seed),
         17..=128 => len_17to128_64(input, secret, seed),
-        _ => len_129to240_64(input, secret, seed),
+        _ => len_129to240_64::<false>(input, secret, seed),
     }
 }
 
@@ -488,32 +505,89 @@ fn long_acc(input: &[u8], secret: &[u8]) -> [u64; 8] {
 // ---------------------------------------------------------------------------
 // Public one-shot functions
 
+// The entry points inline only the paths for inputs of at most 128 bytes.
+// Inlining the 129..=240 or long paths into them adds register saves and a
+// stack frame to every call, which cost 8- and 16-byte hashes 20-30% (see
+// CLAUDE.md). The out-of-line helpers below still use the default secret as a
+// constant, so its bytes fold into immediates.
+
+// Seed 0 gets its own copy: with a constant seed, `secret + seed` folds into
+// immediates. A runtime seed in the same body let LLVM's SLP vectorizer pack
+// the (lo, hi) pairs into SSE registers (measured 18.2 ns vs 10.9 ns at 240 B).
+
+#[inline(never)]
+fn mid_64_default(data: &[u8]) -> u64 {
+    len_129to240_64::<false>(data, default_short_secret(), 0)
+}
+
+#[inline(never)]
+fn mid_64_seeded(data: &[u8], seed: u64) -> u64 {
+    len_129to240_64::<true>(data, default_short_secret(), seed)
+}
+
+#[inline(never)]
+fn mid_128_default(data: &[u8]) -> u128 {
+    len_129to240_128(data, default_short_secret(), 0)
+}
+
+#[inline(never)]
+fn mid_128_seeded(data: &[u8], seed: u64) -> u128 {
+    len_129to240_128(data, default_short_secret(), seed)
+}
+
+#[inline(never)]
+fn long_64_default(data: &[u8]) -> u64 {
+    finish_long_64(
+        &long_acc(data, &DEFAULT_SECRET),
+        &DEFAULT_SECRET,
+        data.len() as u64,
+    )
+}
+
+#[inline(never)]
+fn long_128_default(data: &[u8]) -> u128 {
+    finish_long_128(
+        &long_acc(data, &DEFAULT_SECRET),
+        &DEFAULT_SECRET,
+        data.len() as u64,
+    )
+}
+
+#[inline(never)]
+fn long_64_seeded(data: &[u8], seed: u64) -> u64 {
+    let secret = derive_secret(seed);
+    finish_long_64(&long_acc(data, &secret), &secret, data.len() as u64)
+}
+
+#[inline(never)]
+fn long_128_seeded(data: &[u8], seed: u64) -> u128 {
+    let secret = derive_secret(seed);
+    finish_long_128(&long_acc(data, &secret), &secret, data.len() as u64)
+}
+
 /// Computes the 64-bit XXH3 hash of `data` (seed 0, default secret).
 ///
 /// ```
 /// assert_eq!(zenhash::xxh3_64(b""), 0x2D06_8005_38D3_94C2);
 /// ```
 pub fn xxh3_64(data: &[u8]) -> u64 {
-    if data.len() <= MID_SIZE_MAX {
-        short_64(data, default_short_secret(), 0)
-    } else {
-        finish_long_64(
-            &long_acc(data, &DEFAULT_SECRET),
-            &DEFAULT_SECRET,
-            data.len() as u64,
-        )
+    match data.len() {
+        0..=16 => len_0to16_64(data, default_short_secret(), 0),
+        17..=128 => len_17to128_64(data, default_short_secret(), 0),
+        129..=MID_SIZE_MAX => mid_64_default(data),
+        _ => long_64_default(data),
     }
 }
 
 /// Computes the 64-bit XXH3 hash of `data` with `seed`.
 pub fn xxh3_64_with_seed(data: &[u8], seed: u64) -> u64 {
-    if data.len() <= MID_SIZE_MAX {
-        short_64(data, default_short_secret(), seed)
-    } else if seed == 0 {
-        xxh3_64(data)
-    } else {
-        let secret = derive_secret(seed);
-        finish_long_64(&long_acc(data, &secret), &secret, data.len() as u64)
+    match data.len() {
+        0..=16 => len_0to16_64(data, default_short_secret(), seed),
+        17..=128 => len_17to128_64(data, default_short_secret(), seed),
+        129..=MID_SIZE_MAX if seed == 0 => mid_64_default(data),
+        129..=MID_SIZE_MAX => mid_64_seeded(data, seed),
+        _ if seed == 0 => long_64_default(data),
+        _ => long_64_seeded(data, seed),
     }
 }
 
@@ -537,26 +611,23 @@ pub fn xxh3_64_with_secret(data: &[u8], secret: &[u8]) -> Result<u64, At<Error>>
 /// assert_eq!(zenhash::xxh3_128(b""), 0x99AA_06D3_0147_98D8_6001_C324_468D_497F);
 /// ```
 pub fn xxh3_128(data: &[u8]) -> u128 {
-    if data.len() <= MID_SIZE_MAX {
-        short_128(data, default_short_secret(), 0)
-    } else {
-        finish_long_128(
-            &long_acc(data, &DEFAULT_SECRET),
-            &DEFAULT_SECRET,
-            data.len() as u64,
-        )
+    match data.len() {
+        0..=16 => len_0to16_128(data, default_short_secret(), 0),
+        17..=128 => len_17to128_128(data, default_short_secret(), 0),
+        129..=MID_SIZE_MAX => mid_128_default(data),
+        _ => long_128_default(data),
     }
 }
 
 /// Computes the 128-bit XXH3 hash of `data` with `seed`.
 pub fn xxh3_128_with_seed(data: &[u8], seed: u64) -> u128 {
-    if data.len() <= MID_SIZE_MAX {
-        short_128(data, default_short_secret(), seed)
-    } else if seed == 0 {
-        xxh3_128(data)
-    } else {
-        let secret = derive_secret(seed);
-        finish_long_128(&long_acc(data, &secret), &secret, data.len() as u64)
+    match data.len() {
+        0..=16 => len_0to16_128(data, default_short_secret(), seed),
+        17..=128 => len_17to128_128(data, default_short_secret(), seed),
+        129..=MID_SIZE_MAX if seed == 0 => mid_128_default(data),
+        129..=MID_SIZE_MAX => mid_128_seeded(data, seed),
+        _ if seed == 0 => long_128_default(data),
+        _ => long_128_seeded(data, seed),
     }
 }
 

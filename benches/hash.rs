@@ -53,6 +53,31 @@ fn xxh3_64(suite: &mut Suite) {
     }
 }
 
+fn xxh3_64_seeded(suite: &mut Suite) {
+    const SEED: u64 = 0x9E37_79B9_7F4A_7C15;
+    for len in [16usize, 240, 64 * 1024] {
+        let input = data(len);
+        let name = format!("xxh3_64_seeded/{len}");
+        if !wanted(&name) {
+            continue;
+        }
+        suite.group(name, |g| {
+            g.throughput(Throughput::Bytes(len as u64));
+            g.bench("zenhash", move |b| {
+                b.iter(|| zenhash::xxh3_64_with_seed(black_box(input), black_box(SEED)))
+            });
+            g.bench("twox-hash", move |b| {
+                b.iter(|| {
+                    twox_hash::XxHash3_64::oneshot_with_seed(black_box(SEED), black_box(input))
+                })
+            });
+            g.bench("xxhash-rust", move |b| {
+                b.iter(|| xxhash_rust::xxh3::xxh3_64_with_seed(black_box(input), black_box(SEED)))
+            });
+        });
+    }
+}
+
 fn xxh3_128(suite: &mut Suite) {
     for len in [16usize, 240, 64 * 1024] {
         let input = data(len);
@@ -153,4 +178,10 @@ fn xxh64_xxh32(suite: &mut Suite) {
     }
 }
 
-zenbench::main!(xxh3_64, xxh3_128, xxh3_streaming, xxh64_xxh32);
+zenbench::main!(
+    xxh3_64,
+    xxh3_64_seeded,
+    xxh3_128,
+    xxh3_streaming,
+    xxh64_xxh32
+);

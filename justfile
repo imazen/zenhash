@@ -22,7 +22,8 @@ clippy-arch:
     cargo clippy --all-targets --all-features --target x86_64-unknown-linux-gnu -- -D warnings
     RUSTFLAGS="-Ctarget-feature=+simd128" cargo clippy --lib --no-default-features --target wasm32-unknown-unknown -- -D warnings
 
-# Run the NEON tier under qemu (apt: qemu-user gcc-aarch64-linux-gnu)
+# Run the NEON tier under qemu (apt: qemu-user gcc-aarch64-linux-gnu; on Ubuntu
+# that package conflicts with gcc-multilib, which the i686 tests need)
 test-aarch64-qemu:
     CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc \
     CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_RUNNER="qemu-aarch64 -L /usr/aarch64-linux-gnu" \
