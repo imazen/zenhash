@@ -74,9 +74,9 @@ fuzz target secs="600":
 bench *ARGS:
     cargo bench --bench hash {{ARGS}}
 
-# Same, with the AVX-512 tier compiled in
-bench-avx512 *ARGS:
-    cargo bench --bench hash --features avx512 {{ARGS}}
+# Same, without the AVX-512 tier (what a CPU without AVX-512 runs)
+bench-no-avx512 *ARGS:
+    cargo bench --bench hash --no-default-features --features std {{ARGS}}
 
 # Regenerate README.crates.md from README.md (never edit README.crates.md by hand)
 readme:

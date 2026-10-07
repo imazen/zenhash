@@ -11,7 +11,8 @@ implementation bit for bit on every target and SIMD tier.
   long-input finalization, one-shot API.
 - `src/xxh3/accumulate.rs`: the stripe accumulator, the only SIMD code. One
   shared loop (`consume_body!`) stamped per tier with four helpers (load, store,
-  accumulate one 64-byte stripe, scramble). Tiers: v4 (behind `avx512`), v3,
+  accumulate one 64-byte stripe, scramble). Tiers: v4 (`avx512` feature, on by
+  default), v3,
   v1 (SSE2), neon, wasm128, scalar. Dispatch is one `incant!` per `consume`
   call. Big-endian targets always take scalar.
 - `src/xxh3/stream.rs`: streaming state, mirrors the C buffering (256-byte
@@ -23,7 +24,7 @@ implementation bit for bit on every target and SIMD tier.
 ## Recipes
 
 `just test`, `just clippy`, `just clippy-arch` (NEON/WASM type-check from x86),
-`just test-aarch64-qemu`, `just test-wasm`, `just bench`, `just bench-avx512`,
+`just test-aarch64-qemu`, `just test-wasm`, `just bench`, `just bench-no-avx512`,
 `just ci`. Without wasmtime, Node's `node:wasi` works as a WASI runner.
 
 ## Design decisions

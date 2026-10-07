@@ -63,7 +63,7 @@ call (per `update` call when streaming) to the best tier the CPU has:
 
 | Tier | Target | Enabled by |
 |---|---|---|
-| AVX-512 | x86-64 | the `avx512` cargo feature |
+| AVX-512 | x86-64 | default (`avx512` cargo feature) |
 | AVX2 | x86-64 | default |
 | SSE2 | x86-64 | default (baseline) |
 | NEON | aarch64 | default |
@@ -80,7 +80,7 @@ dispatch sees only the features enabled at compile time. Dispatch uses
 | Feature | Default | Effect |
 |---|---|---|
 | `std` | yes | Runtime CPU detection; `std::io::Write` for `Xxh3`. |
-| `avx512` | no | Compiles the AVX-512 tier. On the benchmark CPU, XXH3-64 at 64 KiB ran at 42.3 GiB/s with it and 32.3 GiB/s without (separate runs). Measure on your hardware: AVX-512 behaves differently across CPU generations. |
+| `avx512` | yes | Compiles the AVX-512 tier. On the benchmark CPU, XXH3-64 at 64 KiB ran at 42.3 GiB/s with it and 32.3 GiB/s without (separate runs). Measure on your hardware: AVX-512 behaves differently across CPU generations. |
 
 ## Testing
 
@@ -102,19 +102,25 @@ VM, rustc 1.97.0, no `target-cpu=native`, against twox-hash 2.1.5 and
 xxhash-rust 0.8.19. Full tables, method and repro commands:
 [benchmarks/xxhash_2026-10-07.md](https://github.com/imazen/zenhash/blob/main/benchmarks/xxhash_2026-10-07.md).
 
+Default build (AVX-512 tier on this CPU):
+
 | XXH3-64 input | zenhash | twox-hash | xxhash-rust |
 |---|---|---|---|
-| 240 B | 20.1 GiB/s | 29-30% slower | 99-102% slower |
-| 1 KiB | 25.4 GiB/s | 3-4% slower | 41-42% slower |
-| 64 KiB | 32.3 GiB/s | 2-3.5% faster | 53-54% slower |
-| 64 KiB, `avx512` feature | 42.3 GiB/s | 24-27% slower | 97-100% slower |
-| 1 MiB in 64 B `update` calls | 8.3 GiB/s | 22-24% slower | 18-20% slower |
+| 240 B | 17.8 GiB/s | 29-32% slower | 97-101% slower |
+| 1 KiB | 28.9 GiB/s | 1-3% slower | 47-49% slower |
+| 64 KiB | 42.3 GiB/s | 24-27% slower | 97-100% slower |
+| 1 MiB | 33.0 GiB/s | 29-31% slower | 75-79% slower |
+| 1 MiB in 4 KiB `update` calls | 25.9 GiB/s | 13-16% slower | 43-45% slower |
+| 1 MiB in 64 B `update` calls | 8.6 GiB/s | 14-16% slower | 11-12% slower |
+
+On a CPU without AVX-512 (AVX2 tier, measured with the feature off): 64 KiB
+at 32.3 GiB/s, within 3.5% of twox-hash and 53-54% faster than xxhash-rust.
 
 Percentages are zenbench's 95% confidence intervals of each competitor's
 time relative to zenhash's. Where zenhash loses or ties: XXH32 and XXH64 at
 16 bytes (2-15% slower), XXH3 below 64 bytes (within about 10% of
-xxhash-rust, either direction from run to run), and 64 KiB and up without
-`avx512` (within 3.5% of twox-hash). The VM's run-to-run drift is large;
+xxhash-rust, either direction from run to run), and 64 KiB and up on CPUs without AVX-512
+(within 3.5% of twox-hash). The VM's run-to-run drift is large;
 treat these as one machine's results.
 <!-- crates.io:skip-end -->
 

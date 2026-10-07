@@ -20,11 +20,12 @@ exclude = [
 ]
 
 [features]
-default = ["std"]
+default = ["std", "avx512"]
 # archmage detects CPU features at runtime only with its `std` feature. Without
 # it, dispatch sees only the features enabled at compile time.
 std = ["archmage/std", "whereat/std"]
-# AVX-512 tier for the XXH3 accumulator. Costs compile time.
+# AVX-512 tier for the XXH3 accumulator. On by default; disable it with
+# `default-features = false, features = ["std"]` to save compile time.
 avx512 = ["archmage/avx512"]
 # Dev-only: lets tests disable SIMD tiers the target guarantees. Never in `default`.
 _dev = ["archmage/testable_dispatch"]

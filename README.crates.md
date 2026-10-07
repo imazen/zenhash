@@ -65,7 +65,7 @@ call (per `update` call when streaming) to the best tier the CPU has:
 
 | Tier | Target | Enabled by |
 |---|---|---|
-| AVX-512 | x86-64 | the `avx512` cargo feature |
+| AVX-512 | x86-64 | default (`avx512` cargo feature) |
 | AVX2 | x86-64 | default |
 | SSE2 | x86-64 | default (baseline) |
 | NEON | aarch64 | default |
@@ -82,7 +82,7 @@ dispatch sees only the features enabled at compile time. Dispatch uses
 | Feature | Default | Effect |
 |---|---|---|
 | `std` | yes | Runtime CPU detection; `std::io::Write` for `Xxh3`. |
-| `avx512` | no | Compiles the AVX-512 tier. On the benchmark CPU, XXH3-64 at 64 KiB ran at 42.3 GiB/s with it and 32.3 GiB/s without (separate runs). Measure on your hardware: AVX-512 behaves differently across CPU generations. |
+| `avx512` | yes | Compiles the AVX-512 tier. On the benchmark CPU, XXH3-64 at 64 KiB ran at 42.3 GiB/s with it and 32.3 GiB/s without (separate runs). Measure on your hardware: AVX-512 behaves differently across CPU generations. |
 
 ## Testing
 
