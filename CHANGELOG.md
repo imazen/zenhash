@@ -4,7 +4,7 @@
 
 ### Dependency compatibility
 
-- Admit archmage/magetypes 0.9.31-beta.1 in the current-main tool graph while retaining compatible stable requirements (`e2261fa1`). Strict library lint, all 20 integration tests, the separate tier-parity test and 13 doctests pass.
+- Admit archmage 0.9.31-beta.1 in the current-main tool graph while retaining compatible stable requirements (`e2261fa1`). Strict library lint, all 20 integration tests, the separate tier-parity test and 13 doctests pass.
 
 ### QUEUED BREAKING CHANGES
 <!-- Breaks that ship together in the next leading-digit bump (0.x: the minor). None yet. -->
