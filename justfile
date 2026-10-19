@@ -130,3 +130,9 @@ quality-bootstrap:
     @if [ -d "{{ZENUTILS}}/quality" ]; then echo "kit found at {{ZENUTILS}}"; \
     else git clone --quiet https://github.com/imazen/zenutils "{{justfile_directory()}}/.quality-kit" && \
     echo "cloned kit into .quality-kit (gitignored)"; fi
+
+# Current-main SIMD dependency compatibility; retain the independent hash oracles.
+beta-cohort-check:
+    cargo fmt --check
+    cargo clippy --locked --lib -- -D warnings
+    cargo test --locked --all-features
