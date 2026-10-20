@@ -181,3 +181,11 @@ Bench host for these entries: Xeon family 6 model 207 (Emerald Rapids),
 ## Known Bugs
 
 None open.
+
+### 2026-10-19: fuzz runner tool and target selection
+
+The install action inferred no tool from its cargo-fuzz ref on both Linux
+runners; supply its tool input explicitly. The installed executable then
+defaulted to a musl target, which failed ASan/static-libc compatibility and
+core discovery. The fuzz command now selects the runner architecture with
+`-unknown-linux-gnu` explicitly. No corpus, oracle or assertion was changed.

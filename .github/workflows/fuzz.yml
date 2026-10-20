@@ -54,7 +54,7 @@ jobs:
           cp fuzz/regression/* fuzz/corpus/${{ matrix.target }}/
       - name: Fuzz
         run: |
-          cargo +nightly fuzz run ${{ matrix.target }} -- \
+          cargo +nightly fuzz run ${{ matrix.target }} --target ${{ matrix.arch }}-unknown-linux-gnu -- \
             -max_total_time=${{ steps.duration.outputs.seconds }} \
             -max_len=8192 -rss_limit_mb=2048
       - name: Upload crashes
