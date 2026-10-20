@@ -38,6 +38,8 @@ jobs:
           key: fuzz-${{ matrix.target }}-${{ matrix.arch }}
           workspaces: fuzz
       - uses: taiki-e/install-action@cargo-fuzz
+        with:
+          tool: cargo-fuzz
       - name: Determine duration
         id: duration
         run: |

@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+### Fixed
+- Explicitly select cargo-fuzz in the fuzz workflow; the runner otherwise completed installation without installing a tool.
+
+
 ### Dependency compatibility
 
 - Admit archmage 0.9.31-beta.1 in the current-main tool graph while retaining compatible stable requirements (`e2261fa1`). Strict library lint, all 20 integration tests, the separate tier-parity test and 13 doctests pass.
