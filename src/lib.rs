@@ -1,4 +1,4 @@
-//! zenhash implements the xxHash family (XXH3 64/128, XXH64, XXH32) in safe
+//! zenhash implements XXH3, classic xxHash and standard rapidhash v3 in safe
 //! Rust, with runtime SIMD dispatch for XXH3 on long inputs.
 //!
 //! ```
@@ -12,7 +12,7 @@
 //! ```
 //!
 //! The default-enabled `xxh3` feature provides XXH3 and its custom-secret errors.
-//! XXH32 and XXH64 remain available without it. The goal is safe Rust with
+//! `rapidhash`, `xxh32` and `xxh64` are opt-in algorithm features. The goal is safe Rust with
 //! competitive performance on x86, ARM and WebAssembly; performance parity
 //! across ISAs remains a measurement goal. XXH3 is non-cryptographic: see the
 //! [usage guidance](https://github.com/imazen/zenhash/blob/main/docs/xxh3-quality.md).
@@ -31,12 +31,27 @@ extern crate std;
 #[cfg(feature = "xxh3")]
 whereat::define_at_crate_info!();
 
+#[cfg(any(
+    feature = "xxh3",
+    feature = "xxh32",
+    feature = "xxh64",
+    feature = "rapidhash"
+))]
 mod common;
+#[cfg(feature = "rapidhash")]
+mod rapidhash;
+
+#[cfg(feature = "rapidhash")]
+pub use rapidhash::{
+    RapidhashV3, rapidhash_v3, rapidhash_v3_with_seed, rapidhash_v3_with_seed_and_secret,
+};
 #[cfg(feature = "xxh3")]
 mod error;
 #[cfg(feature = "xxh3")]
 mod xxh3;
+#[cfg(feature = "xxh32")]
 mod xxh32;
+#[cfg(feature = "xxh64")]
 mod xxh64;
 
 #[cfg(feature = "xxh3")]
@@ -46,7 +61,9 @@ pub use xxh3::{
     XXH3_SECRET_SIZE_MIN, Xxh3, xxh3_64, xxh3_64_with_secret, xxh3_64_with_seed, xxh3_128,
     xxh3_128_with_secret, xxh3_128_with_seed,
 };
+#[cfg(feature = "xxh32")]
 pub use xxh32::{Xxh32, xxh32};
+#[cfg(feature = "xxh64")]
 pub use xxh64::{Xxh64, xxh64};
 
 /// Runs the README's code blocks as doctests.

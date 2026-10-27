@@ -1,11 +1,33 @@
+#![cfg(any(
+    feature = "xxh3",
+    feature = "xxh32",
+    feature = "xxh64",
+    feature = "rapidhash"
+))]
+
 // One integration-test binary: every top-level file in tests/ links
 // separately, so new test files go here as modules.
+#[cfg(any(feature = "xxh3", feature = "xxh32", feature = "xxh64"))]
 mod api;
 #[cfg(feature = "xxh3")]
 mod fuzz_regression;
+#[cfg(any(feature = "xxh3", feature = "xxh32", feature = "xxh64"))]
 mod oracle;
+#[cfg(any(feature = "xxh3", feature = "xxh32", feature = "xxh64"))]
 mod random;
+#[cfg(any(feature = "xxh3", feature = "xxh32", feature = "xxh64"))]
 mod vectors;
+
+#[cfg(feature = "rapidhash")]
+mod rapid;
+
+#[cfg(all(
+    feature = "xxh3",
+    feature = "xxh32",
+    feature = "xxh64",
+    feature = "rapidhash"
+))]
+mod conformance;
 
 /// Deterministic test bytes (splitmix64), so failures reproduce.
 pub(crate) fn test_bytes(len: usize, seed: u64) -> Vec<u8> {
@@ -23,6 +45,7 @@ pub(crate) fn test_bytes(len: usize, seed: u64) -> Vec<u8> {
 }
 
 /// Lengths that hit every XXH3 path boundary plus block and buffer edges.
+#[cfg(any(feature = "xxh3", feature = "xxh32", feature = "xxh64"))]
 pub(crate) fn interesting_lengths() -> Vec<usize> {
     let mut v: Vec<usize> = (0..=300).collect();
     for base in [
@@ -32,4 +55,15 @@ pub(crate) fn interesting_lengths() -> Vec<usize> {
         v.push(base);
     }
     v
+}
+
+#[cfg(all(
+    feature = "xxh3",
+    feature = "xxh32",
+    feature = "xxh64",
+    feature = "rapidhash"
+))]
+#[test]
+fn c_reference_conformance_matrix() {
+    conformance::verify();
 }

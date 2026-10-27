@@ -28,27 +28,36 @@ fn debug_never_shows_secret_seed_or_input() {
         );
         assert!(format!("{:?}", zenhash::Xxh3::new()).contains("default"));
     }
-    let seed = 0x1234_5678_9ABC_DEF0u64;
-    let mut h = zenhash::Xxh64::with_seed(seed);
-    h.update(b"SENSITIVE");
-    let s = format!("{h:?}");
-    assert!(
-        s.contains("total_len: 9") && !s.contains(&seed.to_string()),
-        "{s}"
-    );
-    let mut h = zenhash::Xxh32::with_seed(0xDEAD_BEEF);
-    h.update(b"SENSITIVE");
-    let s = format!("{h:?}");
-    assert!(
-        s.contains("total_len: 9") && !s.contains(&0xDEAD_BEEFu32.to_string()),
-        "{s}"
-    );
+    #[cfg(feature = "xxh64")]
+    {
+        let seed = 0x1234_5678_9ABC_DEF0u64;
+        let mut h = zenhash::Xxh64::with_seed(seed);
+        h.update(b"SENSITIVE");
+        let s = format!("{h:?}");
+        assert!(
+            s.contains("total_len: 9") && !s.contains(&seed.to_string()),
+            "{s}"
+        );
+    }
+    #[cfg(feature = "xxh32")]
+    {
+        let mut h = zenhash::Xxh32::with_seed(0xDEAD_BEEF);
+        h.update(b"SENSITIVE");
+        let s = format!("{h:?}");
+        assert!(
+            s.contains("total_len: 9") && !s.contains(&0xDEAD_BEEFu32.to_string()),
+            "{s}"
+        );
+    }
 }
 
 #[test]
 fn new_default_and_seed_zero_agree() {
     let data = test_bytes(1000, 4);
-    let mut hashers: [(Box<dyn Hasher>, u64); if cfg!(feature = "xxh3") { 9 } else { 6 }] = [
+    let mut hashers: [(Box<dyn Hasher>, u64);
+        3 * (cfg!(feature = "xxh3") as usize
+            + cfg!(feature = "xxh64") as usize
+            + cfg!(feature = "xxh32") as usize)] = [
         #[cfg(feature = "xxh3")]
         (Box::new(zenhash::Xxh3::new()), zenhash::xxh3_64(&data)),
         #[cfg(feature = "xxh3")]
@@ -58,23 +67,29 @@ fn new_default_and_seed_zero_agree() {
             Box::new(zenhash::Xxh3::with_seed(0)),
             zenhash::xxh3_64(&data),
         ),
+        #[cfg(feature = "xxh64")]
         (Box::new(zenhash::Xxh64::new()), zenhash::xxh64(&data, 0)),
+        #[cfg(feature = "xxh64")]
         (
             Box::new(zenhash::Xxh64::default()),
             zenhash::xxh64(&data, 0),
         ),
+        #[cfg(feature = "xxh64")]
         (
             Box::new(zenhash::Xxh64::with_seed(0)),
             zenhash::xxh64(&data, 0),
         ),
+        #[cfg(feature = "xxh32")]
         (
             Box::new(zenhash::Xxh32::new()),
             u64::from(zenhash::xxh32(&data, 0)),
         ),
+        #[cfg(feature = "xxh32")]
         (
             Box::new(zenhash::Xxh32::default()),
             u64::from(zenhash::xxh32(&data, 0)),
         ),
+        #[cfg(feature = "xxh32")]
         (
             Box::new(zenhash::Xxh32::with_seed(0)),
             u64::from(zenhash::xxh32(&data, 0)),
@@ -94,16 +109,22 @@ fn io_write_matches_one_shot() {
     let data = test_bytes(10_000, 5);
     #[cfg(feature = "xxh3")]
     let mut a = zenhash::Xxh3::with_seed(9);
+    #[cfg(feature = "xxh64")]
     let mut b = zenhash::Xxh64::with_seed(9);
+    #[cfg(feature = "xxh32")]
     let mut c = zenhash::Xxh32::with_seed(9);
     #[cfg(feature = "xxh3")]
     std::io::copy(&mut &data[..], &mut a).unwrap();
+    #[cfg(feature = "xxh64")]
     std::io::copy(&mut &data[..], &mut b).unwrap();
+    #[cfg(feature = "xxh32")]
     std::io::copy(&mut &data[..], &mut c).unwrap();
     let writers: &mut [&mut dyn Write] = &mut [
         #[cfg(feature = "xxh3")]
         &mut a,
+        #[cfg(feature = "xxh64")]
         &mut b,
+        #[cfg(feature = "xxh32")]
         &mut c,
     ];
     for w in writers {
@@ -115,7 +136,9 @@ fn io_write_matches_one_shot() {
         assert_eq!(a.digest(), zenhash::xxh3_64_with_seed(&data, 9));
         assert_eq!(a.digest128(), zenhash::xxh3_128_with_seed(&data, 9));
     }
+    #[cfg(feature = "xxh64")]
     assert_eq!(b.digest(), zenhash::xxh64(&data, 9));
+    #[cfg(feature = "xxh32")]
     assert_eq!(c.digest(), zenhash::xxh32(&data, 9));
 }
 
@@ -134,16 +157,23 @@ fn clones_continue_independently() {
         assert_eq!(a.digest(), whole.digest());
         assert_ne!(a.digest(), b.digest());
     }
-    let mut x = zenhash::Xxh64::new();
-    x.update(&data[..33]);
-    let y = x.clone();
-    assert_eq!(x.digest(), y.digest());
-    let mut x = zenhash::Xxh32::new();
-    x.update(&data[..17]);
-    let y = x.clone();
-    assert_eq!(x.digest(), y.digest());
+    #[cfg(feature = "xxh64")]
+    {
+        let mut x = zenhash::Xxh64::new();
+        x.update(&data[..33]);
+        let y = x.clone();
+        assert_eq!(x.digest(), y.digest());
+    }
+    #[cfg(feature = "xxh32")]
+    {
+        let mut x = zenhash::Xxh32::new();
+        x.update(&data[..17]);
+        let y = x.clone();
+        assert_eq!(x.digest(), y.digest());
+    }
 }
 
+#[cfg(any(feature = "xxh3", feature = "xxh32"))]
 #[test]
 fn reset_keeps_seed_and_secret() {
     let data = test_bytes(2000, 7);
@@ -163,11 +193,14 @@ fn reset_keeps_seed_and_secret() {
             zenhash::xxh3_128_with_secret(&data[..500], &secret).unwrap()
         );
     }
-    let mut h = zenhash::Xxh32::with_seed(77);
-    h.update(&data);
-    h.reset();
-    h.update(&data[..20]);
-    assert_eq!(h.digest(), zenhash::xxh32(&data[..20], 77));
+    #[cfg(feature = "xxh32")]
+    {
+        let mut h = zenhash::Xxh32::with_seed(77);
+        h.update(&data);
+        h.reset();
+        h.update(&data[..20]);
+        assert_eq!(h.digest(), zenhash::xxh32(&data[..20], 77));
+    }
 }
 
 #[cfg(feature = "xxh3")]
