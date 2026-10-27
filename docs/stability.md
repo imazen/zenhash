@@ -5,9 +5,12 @@ with default features disabled. This matters: the root package's dev-dependencie
 enable archmage/std, so its tests alone cannot demonstrate a no_std library build.
 
 `just stability-configs` executes the feature powerset. CI partitions this work
-on Linux. Native portability jobs run default and all-feature integration tests;
+on Linux in sixteen parallel shards. Native portability jobs run default and all-feature integration tests;
 i686 and s390x run through cross; WASI runs explicitly with SIMD128 disabled and
-enabled. The separate tier process disables available SIMD tokens and checks
+enabled. Two additional isolated-corpus runs cover explicit `wide-arithmetic`,
+with SIMD off and on and the proposal enabled in Wasmtime. This compiler target
+feature is experimental and is not enabled for crate consumers.
+The separate tier process disables available SIMD tokens and checks
 XXH3 through every reachable dispatch tier. Multiple token permutations that
 select the same kernel share one expanded-corpus run; the original cases still
 execute on every permutation. Feature combinations are exhausted

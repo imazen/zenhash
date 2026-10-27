@@ -181,12 +181,12 @@ jobs:
           diff -u tests/reference/fnv-bases.txt target/fnv-bases.txt
 
   stability-configs:
-    name: Runtime feature powerset (${{ matrix.shard }}/8)
+    name: Runtime feature powerset (${{ matrix.shard }}/16)
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3, 4, 5, 6, 7, 8]
+        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
@@ -195,7 +195,7 @@ jobs:
         with:
           workspaces: tools/stability
           key: stability-${{ matrix.shard }}
-      - run: cargo hack test --manifest-path tools/stability/Cargo.toml --feature-powerset --partition ${{ matrix.shard }}/8
+      - run: cargo hack test --manifest-path tools/stability/Cargo.toml --feature-powerset --partition ${{ matrix.shard }}/16
 
   lint:
     name: fmt, clippy, docs

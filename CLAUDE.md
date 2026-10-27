@@ -189,3 +189,12 @@ runners; supply its tool input explicitly. The installed executable then
 defaulted to a musl target, which failed ASan/static-libc compatibility and
 core discovery. The fuzz command now selects the runner architecture with
 `-unknown-linux-gnu` explicitly. No corpus, oracle or assertion was changed.
+
+
+### 2026-10-27: native CI artifact isolation
+
+A Linux `target-cpu=native` step triggered SIGILL after restoring build
+artifacts; portable builds passed. Native-CPU jobs now compile in a fresh
+runner temporary directory. The subsequent full CI run passed. Portable builds
+retain their cache. Current feature/portability coverage is documented in
+`docs/stability.md`, and measured ARM/WASM results live under `benchmarks/`.
