@@ -14,7 +14,8 @@ its assembly saved six registers before selecting the input length. Keeping the
 seven-lane state out of short callers removed those saves from the short path.
 The default-secret specialization preserves constant secret folding for long input.
 
-The final 4-byte group ties the other Rust port within its reported interval.
+Both final 4-byte means round to 0.8 ns. The reported relative interval
+(+0.1% to +2.7% competitor time) slightly favors zenhash.
 At 64 KiB the measured throughputs are 40.2 and 38.0 GiB/s. Streaming 64 KiB with
 4 KiB updates remains slower (25.0 versus 32.4 GiB/s). Moving previous-tail capture
 after the block loop did not close that gap and was not retained. This is one x86
