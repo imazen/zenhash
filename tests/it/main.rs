@@ -30,6 +30,12 @@ mod rapid;
 ))]
 mod conformance;
 
+#[cfg(any(
+    feature = "xxh3",
+    feature = "xxh32",
+    feature = "xxh64",
+    feature = "rapidhash"
+))]
 /// Deterministic test bytes (splitmix64), so failures reproduce.
 pub(crate) fn test_bytes(len: usize, seed: u64) -> Vec<u8> {
     let mut state = seed.wrapping_add(0x9E37_79B9_7F4A_7C15);

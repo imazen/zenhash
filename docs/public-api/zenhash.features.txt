@@ -1,5 +1,5 @@
 # zenhash public API — additions from non-default features
-# features: avx512,rapidhash,std,xxh3,xxh32,xxh64
+# features: avx512,fnv,io,rapidhash,std,xxh3,xxh32,xxh64
 # (regenerated on every `cargo test` by zenutils-apidoc; ZEN_API_DOC=check verifies, =off skips).
 # Encodings: crate-name prefix stripped; auto traits collapse to a
 # count + exceptions; trait impls collapse to one roster line per
@@ -9,17 +9,38 @@
 
 ## summary
 #
-#   pub types (struct/enum/trait/alias)         3
-#   free functions                              5
-#   inherent methods                           16
-#   trait roster entries (type × trait)        15
-#   auto-trait-complete types                   3
+#   pub types (struct/enum/trait/alias)         6
+#   pub consts/statics                         11
+#   free functions                             10
+#   inherent methods                           22
+#   trait roster entries (type × trait)        31
+#   auto-trait-complete types                   6
 #
 # per-module pub lines:
-#   (root)                           24
+#   (root)                           49
 
-## items (24 lines)
+## items (49 lines)
 
+pub struct Fnv1a128
+pub const fn Fnv1a128::digest(&self) -> u128
+pub const fn Fnv1a128::new() -> Self
+pub fn Fnv1a128::reset(&mut self)
+pub fn Fnv1a128::update(&mut self, &[u8])
+pub const fn Fnv1a128::with_basis(u128) -> Self
+pub struct Fnv1a32
+pub const fn Fnv1a32::digest(&self) -> u32
+pub const fn Fnv1a32::new() -> Self
+pub fn Fnv1a32::reset(&mut self)
+pub fn Fnv1a32::update(&mut self, &[u8])
+pub const fn Fnv1a32::with_basis(u32) -> Self
+pub struct Fnv1a64
+pub const fn Fnv1a64::digest(&self) -> u64
+pub const fn Fnv1a64::new() -> Self
+pub fn Fnv1a64::reset(&mut self)
+pub fn Fnv1a64::update(&mut self, &[u8])
+pub const fn Fnv1a64::with_basis(u64) -> Self
+pub const fn Fnv1a64::digest_fmix(&self) -> u64
+pub const fn Fnv1a64::digest_fold32(&self) -> u32
 pub struct RapidhashV3
 pub fn RapidhashV3::digest(&self) -> u64
 pub fn RapidhashV3::new() -> Self
@@ -39,18 +60,27 @@ pub fn Xxh64::new() -> Self
 pub fn Xxh64::reset(&mut self)
 pub fn Xxh64::update(&mut self, &[u8])
 pub fn Xxh64::with_seed(u64) -> Self
+pub fn fnv1a128(&[u8]) -> u128
+pub fn fnv1a32(&[u8]) -> u32
+pub fn fnv1a64(&[u8]) -> u64
+pub fn fnv1a64_fmix(&[u8]) -> u64
+pub fn fnv1a64_fold32(&[u8]) -> u32
 pub fn rapidhash_v3(&[u8]) -> u64
 pub fn rapidhash_v3_with_seed(&[u8], u64) -> u64
 pub fn rapidhash_v3_with_seed_and_secret(&[u8], u64, &[u64; 8]) -> u64
 pub fn xxh32(&[u8], u32) -> u32
 pub fn xxh64(&[u8], u64) -> u64
 
-## trait impls (3 types)
+## trait impls (7 types)
 
+Fnv1a128: Clone, Debug, Default, Hasher, Write
+Fnv1a32: Clone, Debug, Default, Hasher, Write
+Fnv1a64: Clone, Debug, Default, Hasher, Write
 RapidhashV3: Clone, Debug, Default, Hasher, Write
+Xxh3: Write
 Xxh32: Clone, Debug, Default, Hasher, Write
 Xxh64: Clone, Debug, Default, Hasher, Write
 
 ## auto traits
 
-3 types implement all of: Freeze, RefUnwindSafe, Send, Sync, Unpin, UnwindSafe
+6 types implement all of: Freeze, RefUnwindSafe, Send, Sync, Unpin, UnwindSafe

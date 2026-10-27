@@ -6,7 +6,7 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: zenhash.txt 22 lines (supported surface) | zenhash.features.txt 28 added (features: avx512,rapidhash,std,xxh3,xxh32,xxh64) | zenhash.internal.txt 1 lines (1 hidden + 0 excluded-feature)
+# files: zenhash.txt 22 lines (supported surface) | zenhash.features.txt 57 added (features: avx512,fnv,io,rapidhash,std,xxh3,xxh32,xxh64) | zenhash.internal.txt 1 lines (1 hidden + 0 excluded-feature)
 
 ## summary
 #
@@ -17,7 +17,7 @@
 #   inherent methods                            7
 #   struct fields                               1
 #   enum variants                               1
-#   trait roster entries (type × trait)        11
+#   trait roster entries (type × trait)        10
 #   auto-trait-complete types                   2
 #
 # per-module pub lines:
@@ -48,7 +48,7 @@ pub fn xxh3_64_with_seed(&[u8], u64) -> u64
 ## trait impls (2 types)
 
 Error: Clone, Debug, Display, Eq, Error, PartialEq
-Xxh3: Clone, Debug, Default, Hasher, Write
+Xxh3: Clone, Debug, Default, Hasher
 
 ## auto traits
 

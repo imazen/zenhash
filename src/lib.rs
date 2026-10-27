@@ -76,3 +76,13 @@ pub use xxh64::{Xxh64, xxh64};
 #[cfg(doctest)]
 #[doc = include_str!("../README.md")]
 struct ReadmeDoctests;
+
+/// `std` alone does not opt into the I/O adapter.
+///
+/// ```compile_fail
+/// use std::io::Write;
+/// let mut h = zenhash::Xxh3::new();
+/// h.write_all(b"hello").unwrap();
+/// ```
+#[cfg(all(doctest, feature = "xxh3", feature = "std", not(feature = "io")))]
+struct IoRequiresOptIn;
