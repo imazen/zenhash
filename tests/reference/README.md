@@ -33,3 +33,26 @@ separate SIMD-tier process repeats it with each available dispatch permutation.
 A Linux CI job recompiles the C generator and compares its output to the fixture.
 Existing randomized and per-case differential tests remain enabled for their
 algorithm features.
+
+## Coverage limits
+
+The fixed matrix exercises all eleven public one-shot hash functions and all
+four streaming hashers. It runs with all algorithm features enabled on each CI
+platform and under the available SIMD dispatch permutations. The feature
+powerset is compile-checked; individual algorithms are runtime-tested on Linux.
+This is not the full runtime cross-product of feature sets, platforms and inputs.
+Bare-metal no_std targets are compile-checked, not executed.
+
+Input and secret patterns currently use the same pattern family in each row;
+the six data families are not independently crossed with six secret families.
+The seed set is four fixed values. The corpus does not enumerate correlated
+seed/key families, all single-bit edits, word permutations, text keys or varied
+cycle lengths. It is a bounded output-stability corpus, not an implementation
+of SMHasher3's statistical avalanche, bit-independence or distribution tests.
+
+Streaming conformance uses one deterministic split and an empty update per
+matrix case. Separate differential tests add fixed chunk sizes, randomized
+splits, unaligned inputs, digest/clone/reset checks and io::Write coverage;
+those behaviors are not each multiplied by the entire matrix. The compact C
+expectations are per-variant fingerprints over output sequences, supplemented
+by per-case Rust-oracle checks and individual rapidhash C vectors.
