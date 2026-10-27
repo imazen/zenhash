@@ -40,3 +40,12 @@ mutants.out*/
 # Isolated feature-conformance runner
 /tools/stability/target/
 !tools/stability/Cargo.lock
+
+/tools/wasm-workload/target/
+/tools/portable-bench/target/
+!tools/wasm-workload/Cargo.lock
+!tools/portable-bench/Cargo.lock
+
+__pycache__/
+
+/tests/reference/*.bak
