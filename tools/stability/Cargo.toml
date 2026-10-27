@@ -1,0 +1,26 @@
+[package]
+name = "zenhash-stability"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[features]
+default = ["std", "xxh3", "xxh32", "xxh64", "rapidhash", "fnv", "io", "avx512"]
+std = ["zenhash/std"]
+io = ["std", "zenhash/io"]
+fnv = ["zenhash/fnv"]
+xxh3 = ["zenhash/xxh3"]
+xxh32 = ["zenhash/xxh32"]
+xxh64 = ["zenhash/xxh64"]
+rapidhash = ["zenhash/rapidhash"]
+avx512 = ["zenhash/avx512"]
+_dev = ["zenhash/_dev"]
+
+[dependencies]
+zenhash = { path = "../..", default-features = false }
+
+[profile.test]
+opt-level = 2
+debug = 0
+
+[workspace]

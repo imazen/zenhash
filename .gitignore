@@ -36,3 +36,7 @@ callgrind.out.*
 cachegrind.out.*
 massif.out.*
 mutants.out*/
+
+# Isolated feature-conformance runner
+/tools/stability/target/
+!tools/stability/Cargo.lock
