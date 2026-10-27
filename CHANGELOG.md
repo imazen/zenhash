@@ -11,9 +11,13 @@
 - Admit archmage 0.9.31-beta.1 in the current-main tool graph while retaining compatible stable requirements (`e2261fa1`). Strict library lint, all 20 integration tests, the separate tier-parity test and 13 doctests pass.
 
 ### QUEUED BREAKING CHANGES
+- `std::io::Write` now requires the separate, opt-in `io` feature; `std` alone only enables standard-library integration.
 - XXH32/XXH64 require opt-in `xxh32`/`xxh64` features (approved before the first release; follows `3dea22a4`).
 
 ### Added
+- Opt-in FNV-1a32/64/128 compatibility APIs, continuation offset bases, XOR-folding and fmix64 finalization.
+- Expanded independent C stability fixtures and isolated runtime feature powerset tests.
+- XXH3 uses archmage 0.9.31-beta.2 `attune` contexts, preferring v4x with v4 fallback.
 - Opt-in safe standard rapidhash v3: one-shot, seeded/custom-secret APIs,
   bounded streaming state, `Hasher` and optional `io::Write` (`16ab3213`).
 - Fast C-reference conformance matrix across algorithms, patterns, lengths,

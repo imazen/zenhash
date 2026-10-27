@@ -1,6 +1,6 @@
 # Hash reference fixtures
 
-The C sources are unmodified and used only by the development tools, never the
+The vendored reference headers are unmodified and used only by development tools, never the
 shipped Rust library. Both hash outputs and all fingerprint inputs are independent
 of native byte order, pointer width and CPU instruction set.
 
@@ -34,25 +34,28 @@ A Linux CI job recompiles the C generator and compares its output to the fixture
 Existing randomized and per-case differential tests remain enabled for their
 algorithm features.
 
-## Coverage limits
+## Expanded fixtures and coverage limits
 
-The fixed matrix exercises all eleven public one-shot hash functions and all
-four streaming hashers. It runs with all algorithm features enabled on each CI
-platform and under the available SIMD dispatch permutations. The feature
-powerset is compile-checked; individual algorithms are runtime-tested on Linux.
-This is not the full runtime cross-product of feature sets, platforms and inputs.
-Bare-metal no_std targets are compile-checked, not executed.
+`just stability-vectors` regenerates `conformance-extended.txt` using independent
+C input scheduling and the same pinned reference algorithms. It crosses twelve
+input families with six secret patterns and six secret lengths. Additional
+rows cover bit edits, correlated seeds and word permutations. Whole and streaming
+prefix outputs are fingerprinted separately in sequence. The original fixture
+and its expectations remain unchanged.
 
-Input and secret patterns currently use the same pattern family in each row;
-the six data families are not independently crossed with six secret families.
-The seed set is four fixed values. The corpus does not enumerate correlated
-seed/key families, all single-bit edits, word permutations, text keys or varied
-cycle lengths. It is a bounded output-stability corpus, not an implementation
-of SMHasher3's statistical avalanche, bit-independence or distribution tests.
+`just fnv-vectors` regenerates `fnv.txt` and `fnv-bases.txt` using unsigned arithmetic in C,
+including 128-bit multiplication. It checks FNV-1a32/64/128 and both existing
+zen finalizers. The formulas and caller provenance are in [docs/fnv.md](../../docs/fnv.md).
+The C generator requires GCC or Clang for unsigned `__int128`; the resulting
+text fixture executes on every target without a C dependency.
 
-Streaming conformance uses one deterministic split and an empty update per
-matrix case. Separate differential tests add fixed chunk sizes, randomized
-splits, unaligned inputs, digest/clone/reset checks and io::Write coverage;
-those behaviors are not each multiplied by the entire matrix. The compact C
-expectations are per-variant fingerprints over output sequences, supplemented
-by per-case Rust-oracle checks and individual rapidhash C vectors.
+The isolated runner executes the feature powerset on Linux. Native, i686,
+big-endian and WASM targets run the full corpus with all algorithms enabled;
+native and WASM jobs also run a genuine no_std dependency graph. Bare-metal
+no_std targets are compile-checked. This is a factored matrix, not an exhaustive
+platform × feature-set product. Exact schedules and method coverage are in
+[docs/stability.md](../../docs/stability.md).
+
+These are bounded output-stability tests, not SMHasher3's statistical avalanche,
+bit-independence or distribution tests. C expectations are compact per-variant
+fingerprints, supplemented by per-case Rust oracles and individual C vectors.

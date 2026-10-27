@@ -193,3 +193,38 @@ rapid-check: algorithm-tests clippy clippy-arch check-targets test-wasm features
 profile-rapid group="rapidhash_v3/4":
     if [ -f "${TMPDIR:?}/zenhash-rapid-perf.data" ]; then mv "${TMPDIR}/zenhash-rapid-perf.data" "${TMPDIR}/zenhash-rapid-perf-$(date -u +%Y%m%dT%H%M%S).data"; fi
     perf record -e cpu-clock:u -g -o "${TMPDIR:?}/zenhash-rapid-perf.data" -- cargo bench --bench rapid --features rapidhash -- --no-busy-gate --group={{group}}
+
+# Extended independent data/secret families, canonical prefixes and related seeds.
+stability-vectors:
+    mkdir -p target
+    cc -O2 -Wall -Wextra -Werror tools/hash-conformance-extended.c -o target/hash-conformance-extended
+    if [ -s tests/reference/conformance-extended.txt ]; then cp tests/reference/conformance-extended.txt tests/reference/conformance-extended.txt.bak; fi
+    target/hash-conformance-extended > tests/reference/conformance-extended.txt
+
+stability:
+    cargo test --manifest-path tools/stability/Cargo.toml
+
+stability-configs *ARGS:
+    cargo hack test --manifest-path tools/stability/Cargo.toml --feature-powerset {{ARGS}}
+
+# Independent FNV compatibility fingerprints (unsigned arithmetic in C).
+fnv-vectors:
+    mkdir -p target
+    cc -O2 -Wall -Wextra -Werror tools/fnv-reference.c -o target/fnv-reference
+    if test -s tests/reference/fnv.txt; then cp tests/reference/fnv.txt tests/reference/fnv.txt.bak; fi
+    target/fnv-reference > tests/reference/fnv.txt
+    if test -s tests/reference/fnv-bases.txt; then cp tests/reference/fnv-bases.txt tests/reference/fnv-bases.txt.bak; fi
+    target/fnv-reference bases > tests/reference/fnv-bases.txt
+
+# Build safe Rust WASM batches, exporting the actual compiler-generated symbol.
+wasm-workloads:
+    python3 tools/build-wasm-workloads.py
+
+# Same hash batches on native, WASM scalar and WASM SIMD128 (one host CPU).
+# Run on a benchmark host, without target-cpu=native.
+bench-portable *ARGS:
+    cargo run --release --manifest-path tools/portable-bench/Cargo.toml -- {{ARGS}}
+
+# Actual no_std dependency graph, all algorithms and the full corpus.
+stability-no-std:
+    cargo test --manifest-path tools/stability/Cargo.toml --no-default-features --features xxh3,xxh32,xxh64,rapidhash,fnv
