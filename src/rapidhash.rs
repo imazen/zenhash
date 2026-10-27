@@ -219,16 +219,12 @@ impl RapidhashV3 {
             self.buf_len = 0;
             self.long = true;
         }
-        let original = data;
         while data.len() > 112 {
             let (block, rest) = data.split_first_chunk::<112>().unwrap();
             consume(&mut self.lanes, block, &self.secret);
+            self.buf[..16].copy_from_slice(&block[96..]);
             self.long = true;
             data = rest;
-        }
-        let consumed = original.len() - data.len();
-        if consumed > 0 {
-            self.buf[..16].copy_from_slice(&original[consumed - 16..consumed]);
         }
         self.buf[16..16 + data.len()].copy_from_slice(data);
         self.buf_len = data.len();
