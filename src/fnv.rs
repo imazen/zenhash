@@ -1,5 +1,6 @@
 //! Stable FNV-1a fingerprints. These preserve existing identifiers; they are
-//! not cryptographic hashes. Prefer rapidhash v3 for new non-adversarial keys.
+//! not cryptographic hashes. Start with XXH3 for new non-adversarial byte fingerprints;
+//! benchmark rapidhash v3 for short native keys.
 
 macro_rules! fnv {
     ($name:ident, $function:ident, $word:ty, $basis:expr, $prime:expr) => {

@@ -8,14 +8,14 @@
 
 ### Dependency compatibility
 
-- Admit archmage 0.9.31-beta.1 in the current-main tool graph while retaining compatible stable requirements (`e2261fa1`). Strict library lint, all 20 integration tests, the separate tier-parity test and 13 doctests pass.
+- Use archmage 0.9.31-beta.2 with `attune` contexts (`bcbd64e5`).
 
 ### QUEUED BREAKING CHANGES
-- `std::io::Write` now requires the separate, opt-in `io` feature; `std` alone only enables standard-library integration.
+- `std::io::Write` now requires the separate, opt-in `io` feature; `std` alone only enables standard-library integration (`bcbd64e5`).
 - XXH32/XXH64 require opt-in `xxh32`/`xxh64` features (approved before the first release; follows `3dea22a4`).
 
 ### Added
-- Opt-in FNV-1a32/64/128 compatibility APIs, continuation offset bases, XOR-folding and fmix64 finalization.
+- Opt-in FNV-1a32/64/128 compatibility APIs, continuation offset bases, XOR-folding and fmix64 finalization (`ce5540f5`).
 - Expanded independent C stability fixtures and isolated runtime feature powerset tests.
 - XXH3 uses archmage 0.9.31-beta.2 `attune` contexts, preferring v4x with v4 fallback.
 - Opt-in safe standard rapidhash v3: one-shot, seeded/custom-secret APIs,
@@ -37,6 +37,8 @@
   feature, on by default), AVX2, SSE2, NEON, WASM SIMD128 and scalar (1c0b386)
 
 ### Performance
+- Pair 32-bit factors in XXH3's WASM and NEON accumulators; add WASM entry-point
+  inlining, with C parity and ARM/Wasmtime measurements (`e9e91d60`, `18eedee8`, `574f1fb8`).
 - XXH3 129..=240 B: unrolled, scalar mid-size paths (2x faster at 240 B)
   (875fb62, 18186a3)
 - XXH3 long inputs: whole-block fast path, `srli` instead of a second

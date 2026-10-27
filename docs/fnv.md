@@ -33,12 +33,18 @@ space, and adding fmix64 does not recover information from collisions already
 present in FNV64. None of these formulas is cryptographic or suitable for hostile
 hash-table keys.
 
-For new non-adversarial byte keys, prefer the opt-in standard `rapidhash` v3
-algorithm. Its upstream [SMHasher3 results](https://gitlab.com/fwojcik/smhasher3/-/raw/main/results/raw/rapidhash.txt)
-provide statistical evidence for that algorithm, not a security guarantee.
-There is no universal fastest replacement across key sizes and architectures;
-benchmark the actual workload. XXH3 is another option when 128-bit output or
-SIMD throughput matters. Neither replaces a cryptographic digest.
+For new non-adversarial byte fingerprints, start with XXH3. It supports 64- and
+128-bit output and SIMD throughput. The [XXH3 quality notes](xxh3-quality.md)
+explain the published statistical findings and usage limits. Standard rapidhash
+v3 is also useful for short native keys, with upstream [SMHasher3 results](https://gitlab.com/fwojcik/smhasher3/-/raw/main/results/raw/rapidhash.txt)
+providing statistical evidence for that algorithm. Neither is cryptographic.
+
+The [Neoverse-N1/Wasmtime measurements](../benchmarks/arm_wasm_2026-10-26.md)
+show why there is no universal fastest replacement. Baseline WASM must emulate
+64×64→128-bit products, which costs rapidhash on tiny inputs. Optional
+wide arithmetic changes that result. Rust 1.99 marks this target feature unstable;
+the benchmark variants explicitly enable it in both compiler and engine.
+Zenhash does not enable it for its consumers. Benchmark the actual deployment.
 
 Switching algorithms changes IDs and cache keys. Retain the original formula
 for persisted formats, or version the identifier and migrate it explicitly.

@@ -7,8 +7,9 @@ and `fnv` are opt-in. Classic `xxh32` and `xxh64` are opt-in compatibility featu
 
 Our goal is `#![forbid(unsafe_code)]` with competitive performance across x86,
 ARM and WebAssembly, including WASM SIMD128. Cross-ISA performance parity is a
-goal, not a measured guarantee; the published benchmark results below cover one
-x86 CPU. Hash outputs must match the reference bit for bit on every ISA.
+goal. Measured performance varies with input size, target and runtime features;
+[ARM/WASM results](https://github.com/imazen/zenhash/blob/main/benchmarks/arm_wasm_2026-10-26.md)
+include the remaining gaps. Hash outputs must match the reference bit for bit on every ISA.
 
 `no_std` + `alloc` · `#![forbid(unsafe_code)]` · MSRV 1.89 · x86-64 (AVX-512, AVX2, SSE2) / aarch64 (NEON) / wasm32 (SIMD128) · MIT OR Apache-2.0
 
@@ -187,10 +188,11 @@ The opt-in `fnv` feature preserves FNV-1a32/64/128 output and existing zen
 formulas. `Fnv1a64::with_basis(previous_digest)` continues a fingerprint;
 `digest_fold32` and `digest_fmix` apply the two existing finalizers without
 changing streaming state. See [formula provenance and migration guidance](https://github.com/imazen/zenhash/blob/main/docs/fnv.md).
-For new non-adversarial byte keys, standard rapidhash v3 is the preferred
-replacement candidate: it offers stronger statistical mixing and parallel
-multiplication on larger inputs. Its output differs from FNV. Keep existing
-stored identifiers on their original formula. For hostile keys, authentication
+For new non-adversarial byte fingerprints, start with XXH3. Rapidhash v3 is
+also useful for short native keys; baseline WASM and optional wide arithmetic
+change that tradeoff. See the measured selection guidance in the linked docs.
+Both algorithms produce different IDs from FNV. Keep existing stored identifiers
+on their original formula. For hostile keys, authentication
 or tamper detection, use an appropriate keyed or cryptographic hash.
 
 ## Testing
@@ -222,6 +224,11 @@ A differential fuzz target lives in `fuzz/`.
 
 <!-- crates.io:skip-start -->
 ## Benchmarks
+
+[ARM and Wasmtime measurements](https://github.com/imazen/zenhash/blob/main/benchmarks/arm_wasm_2026-10-26.md)
+cover native NEON, WASM scalar/SIMD128 and explicit wide arithmetic. The latter
+is an experimental compiler/runtime configuration, enabled only in those builds.
+
 
 Single thread, one Intel Xeon (Emerald Rapids, family 6 model 207) 4-vCPU
 VM, rustc 1.97.0, no `target-cpu=native`, against twox-hash 2.1.5 and

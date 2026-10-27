@@ -1,5 +1,5 @@
-//! zenhash implements XXH3, classic xxHash and standard rapidhash v3 in safe
-//! Rust, with runtime SIMD dispatch for XXH3 on long inputs.
+//! zenhash implements XXH3, classic xxHash, standard rapidhash v3 and FNV-1a
+//! compatibility formulas in safe Rust, with runtime SIMD dispatch for long XXH3 inputs.
 //!
 //! ```
 //! # #[cfg(feature = "xxh3")]
@@ -12,7 +12,9 @@
 //! ```
 //!
 //! The default-enabled `xxh3` feature provides XXH3 and its custom-secret errors.
-//! `rapidhash`, `xxh32` and `xxh64` are opt-in algorithm features. The goal is safe Rust with
+//! `rapidhash`, `fnv`, `xxh32` and `xxh64` are opt-in algorithm features.
+//! Byte-slice and streaming APIs are Sans-I/O; `std` enables CPU detection and
+//! the separate opt-in `io` feature provides `std::io::Write`. The goal is safe Rust with
 //! competitive performance on x86, ARM and WebAssembly; performance parity
 //! across ISAs remains a measurement goal. XXH3 is non-cryptographic: see the
 //! [usage guidance](https://github.com/imazen/zenhash/blob/main/docs/xxh3-quality.md).
