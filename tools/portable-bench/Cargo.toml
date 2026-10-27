@@ -3,6 +3,7 @@ name = "zenhash-portable-bench"
 version = "0.0.0"
 edition = "2024"
 publish = false
+default-run = "zenhash-portable-bench"
 
 [dependencies]
 zenbench = { version = "0.1.11", default-features = false, features = ["wasm"] }

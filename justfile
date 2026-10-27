@@ -228,3 +228,7 @@ bench-portable *ARGS:
 # Actual no_std dependency graph, all algorithms and the full corpus.
 stability-no-std:
     cargo test --manifest-path tools/stability/Cargo.toml --no-default-features --features xxh3,xxh32,xxh64,rapidhash,fnv
+
+# Fixed workload for external perf sampling; WASM emits jitdump in the cwd.
+profile-hash mode algorithm len chunk outer repetitions:
+    cargo run --release --manifest-path tools/portable-bench/Cargo.toml --bin profile_hash -- {{mode}} {{algorithm}} {{len}} {{chunk}} {{outer}} {{repetitions}}
