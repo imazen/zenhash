@@ -15,17 +15,23 @@ def ns_each(group, benchmark, length):
 
 print("| Runtime | Input bytes | FNV-1a64 ns/hash | Rapidhash v3 ns/hash | XXH3-64 ns/hash |")
 print("|---|---:|---:|---:|---:|")
+runtimes = ["native", "WASM scalar", "WASM SIMD128"]
+if "replacement/4/runtime4" in groups:
+    runtimes += ["WASM wide", "WASM SIMD128 + wide"]
 for length in [4, 16, 64, 241, 1024, 65536]:
-    for runtime, name in enumerate(["native", "WASM scalar", "WASM SIMD128"]):
+    for runtime, name in enumerate(runtimes):
         group = f"replacement/{length}/runtime{runtime}"
         numbers = [ns_each(group, b, length) for b in ["fnv64", "rapid_v3", "xxh3_64"]]
         print(f"| {name} | {length} | " + " | ".join(f"{x:.3f}" for x in numbers) + " |")
 print()
-print("| 64 KiB method | Chunk bytes | Native GiB/s | WASM scalar GiB/s | WASM SIMD128 GiB/s |")
-print("|---|---:|---:|---:|---:|")
+names = ["native", "scalar", "simd128"]
+if len(runtimes) == 5:
+    names += ["wide", "simd128-wide"]
+print("| 64 KiB method | Chunk bytes | " + " | ".join(n + " GiB/s" for n in names) + " |")
+print("|---|---:|" + "---:|" * len(names))
 for algorithm in ["xxh3_64", "xxh3_128", "rapid_v3", "xxhash_rust_64", "xxhash_rust_128", "rapidhash_ref"]:
     for chunk in [0, 4096]:
         group = f"{algorithm}/65536/chunk{chunk}"
         numbers = [65536 / ns_each(group, b, 65536) * 1e9 / 2**30
-                   for b in ["native", "scalar", "simd128"]]
+                   for b in names]
         print(f"| {algorithm} | {chunk} | " + " | ".join(f"{x:.3f}" for x in numbers) + " |")
