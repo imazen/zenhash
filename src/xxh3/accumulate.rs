@@ -539,14 +539,19 @@ mod arm {
     ) -> [uint64x2_t; 4] {
         let (data, _) = stripe.as_chunks::<16>();
         let (keys, _) = key.as_chunks::<16>();
-        for i in 0..4 {
-            let data_vec = vreinterpretq_u64_u8(vld1q_u8(&data[i]));
-            let key_vec = vreinterpretq_u64_u8(vld1q_u8(&keys[i]));
-            let data_key = veorq_u64(data_vec, key_vec);
-            let data_swap = vextq_u64::<1>(data_vec, data_vec);
-            let lo = vmovn_u64(data_key);
-            let hi = vshrn_n_u64::<32>(data_key);
-            acc[i] = vmlal_u32(vaddq_u64(acc[i], data_swap), lo, hi);
+        // Pack four low/high 32-bit factors with two unzip operations.
+        // Both widening products then use the same pair of packed vectors.
+        for i in [0, 2] {
+            let a = vreinterpretq_u64_u8(vld1q_u8(&data[i]));
+            let b = vreinterpretq_u64_u8(vld1q_u8(&data[i + 1]));
+            let x = veorq_u64(a, vreinterpretq_u64_u8(vld1q_u8(&keys[i])));
+            let y = veorq_u64(b, vreinterpretq_u64_u8(vld1q_u8(&keys[i + 1])));
+            let lo = vuzp1q_u32(vreinterpretq_u32_u64(x), vreinterpretq_u32_u64(y));
+            let hi = vuzp2q_u32(vreinterpretq_u32_u64(x), vreinterpretq_u32_u64(y));
+            let sum_a = vmlal_u32(vextq_u64::<1>(a, a), vget_low_u32(lo), vget_low_u32(hi));
+            let sum_b = vmlal_high_u32(vextq_u64::<1>(b, b), lo, hi);
+            acc[i] = vaddq_u64(acc[i], sum_a);
+            acc[i + 1] = vaddq_u64(acc[i + 1], sum_b);
         }
         acc
     }
