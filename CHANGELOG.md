@@ -11,12 +11,16 @@
 - Admit archmage 0.9.31-beta.1 in the current-main tool graph while retaining compatible stable requirements (`e2261fa1`). Strict library lint, all 20 integration tests, the separate tier-parity test and 13 doctests pass.
 
 ### QUEUED BREAKING CHANGES
-<!-- Breaks that ship together in the next leading-digit bump (0.x: the minor). None yet. -->
+- XXH32/XXH64 require opt-in `xxh32`/`xxh64` features (approved before the first release; follows `3dea22a4`).
 
 ### Added
+- Opt-in safe standard rapidhash v3: one-shot, seeded/custom-secret APIs,
+  bounded streaming state, `Hasher` and optional `io::Write` (`16ab3213`).
+- Fast C-reference conformance matrix across algorithms, patterns, lengths,
+  seeds and custom secrets on every CI platform and available SIMD tier.
 - Default-enabled `xxh3` feature gates XXH3 functions, streaming state,
-  custom-secret errors and optional SIMD/error dependencies. XXH32/XXH64
-  remain available without it; `std` and `avx512` do not enable XXH3.
+  custom-secret errors and optional SIMD/error dependencies; `std` and
+  `avx512` do not enable XXH3 (`3dea22a4`).
 - Document safe-Rust and cross-ISA/WASM performance goals, published SMHasher3
   findings, and guidance for trusted, statistical and adversarial workloads.
 - `xxh3_64`, `xxh3_128` and their `_with_seed` / `_with_secret` variants;

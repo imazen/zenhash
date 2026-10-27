@@ -65,15 +65,20 @@ with SeedBlockLen, SeedBlockOffset and SeedBIC failures, and
 [XXH32 at 167/250](https://gitlab.com/fwojcik/smhasher3/-/raw/main/results/raw/XXH-32.txt),
 with broader structured-input and bit-independence failures as well as seed
 failures. These findings differ substantially; the counts alone are not a
-universal ranking. Their compatibility value is reproducing existing xxHash
+universal ranking. They are opt-in `xxh64`/`xxh32` features. Their compatibility value is reproducing existing xxHash
 checksums and formats. XXH32's small output space is also a limitation for
 new applications hashing many distinct items.
 
 [Reference rapidhash v3 passes 250/250](https://gitlab.com/fwojcik/smhasher3/-/raw/main/results/raw/rapidhash.txt)
-in its published run and is a candidate for another algorithm feature; it is
-not implemented here yet. A safe Rust port can express its byte reads with
-slices and its widening multiplication with `u128`. Native and WASM performance
-would need measurement; passing statistical tests does not make it cryptographic.
+in its published run. The `rapidhash` feature implements standard v3 with safe
+slice reads and `u128` multiplication, matching the C reference
+[at this revision](https://github.com/Nicoshev/rapidhash/blob/1ae7842f59f25929a338e5a76e3fa350673e48e1/rapidhash.h).
+Micro, Nano, protected mode and randomized secret generation are not included.
+The [native measurements](https://github.com/imazen/zenhash/blob/main/benchmarks/rapidhash_v3_final_2026-10-26.md)
+include the remaining streaming gap; ARM and WASM throughput have not been measured.
+Passing statistical tests does not make it cryptographic. Seed-only APIs keep
+the public default secrets; do not use them for attacker-controlled hash-table
+keys. Custom secrets do not establish cryptographic security either.
 
 The existing [hoxxep/rapidhash crate root](https://github.com/hoxxep/rapidhash/blob/master/rapidhash/src/lib.rs)
 does not forbid unsafe code. Its [read helpers](https://github.com/hoxxep/rapidhash/blob/master/rapidhash/src/util/read.rs)

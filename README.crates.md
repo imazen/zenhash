@@ -3,9 +3,9 @@
 # zenhash
 
 zenhash provides hash algorithms in safe Rust. It currently implements the xxHash
-family (XXH3 64/128, XXH64, XXH32), with runtime SIMD dispatch for XXH3.
-Algorithms can be added independently; XXH3 is behind the default-enabled `xxh3`
-feature.
+family and standard rapidhash v3, with runtime SIMD dispatch for XXH3.
+Algorithms have independent features: `xxh3` is enabled by default; `rapidhash`
+is opt-in. Classic `xxh32` and `xxh64` are opt-in compatibility features.
 
 Our goal is `#![forbid(unsafe_code)]` with competitive performance across x86,
 ARM and WebAssembly, including WASM SIMD128. Cross-ISA performance parity is a
@@ -37,6 +37,37 @@ assert_eq!(h.digest(), h64);
 assert_eq!(h.digest128(), h128);
 # }
 ```
+
+## Rapidhash v3
+
+```toml
+zenhash = { version = "0.1.0", default-features = false, features = ["std", "rapidhash"] }
+```
+
+```rust
+# #[cfg(feature = "rapidhash")]
+# {
+let bytes = b"hello world";
+let hash = zenhash::rapidhash_v3(bytes);
+let mut h = zenhash::RapidhashV3::new();
+h.update(b"hello ");
+h.update(b"world");
+assert_eq!(h.digest(), hash);
+# }
+```
+
+This ports standard v3 with the C reference's output, seed convention and eight
+secret words. `rapidhash_v3_with_seed` selects a seed;
+`rapidhash_v3_with_seed_and_secret` and `RapidhashV3::with_seed_and_secret`
+accept custom secrets. Streaming uses bounded state without allocating.
+Micro, Nano, protected mode, randomized secret generation and `const fn` hashing
+are not implemented.
+
+The [published SMHasher3 v3 run](https://gitlab.com/fwojcik/smhasher3/-/raw/main/results/raw/rapidhash.txt)
+passes 250/250 tests. That is statistical evidence for that algorithm/run, not a
+cryptographic guarantee or a measurement of this port. Fixed default secrets
+remain unsuitable for attacker-controlled hash-table keys, even with a randomized
+seed. See [algorithm selection and limitations](https://github.com/imazen/zenhash/blob/main/docs/xxh3-quality.md).
 
 ## When to use XXH3
 
@@ -77,12 +108,13 @@ Not supported:
 |---|---|---|
 | XXH3, 64-bit | `xxh3_64`, `xxh3_64_with_seed`, `xxh3_64_with_secret` | `Xxh3::digest` |
 | XXH3, 128-bit | `xxh3_128`, `xxh3_128_with_seed`, `xxh3_128_with_secret` | `Xxh3::digest128` |
-| XXH64 | `xxh64(data, seed)` | `Xxh64::digest` |
-| XXH32 | `xxh32(data, seed)` | `Xxh32::digest` |
+| XXH64 (`xxh64` feature) | `xxh64(data, seed)` | `Xxh64::digest` |
+| XXH32 (`xxh32` feature) | `xxh32(data, seed)` | `Xxh32::digest` |
+| rapidhash v3 (`rapidhash` feature) | `rapidhash_v3`, `rapidhash_v3_with_seed`, `rapidhash_v3_with_seed_and_secret` | `RapidhashV3::digest` |
 
 `Xxh3::new`, `Xxh3::with_seed` and `Xxh3::with_secret` pick the variant;
 one streaming state produces both widths. `Xxh64` and `Xxh32` have `new` and
-`with_seed`. All three implement `core::hash::Hasher`, and `std::io::Write`
+`with_seed`. All four hashers implement `core::hash::Hasher`, and `std::io::Write`
 with the `std` feature, so `std::io::copy(&mut reader, &mut hasher)` works.
 Their `Debug` output shows only the byte count, never seeds, secrets or
 buffered input.
@@ -123,13 +155,16 @@ dispatch sees only the features enabled at compile time. Dispatch uses
 | Feature | Default | Effect |
 |---|---|---|
 | `xxh3` | yes | XXH3 64/128 functions, `Xxh3`, custom-secret `Error` and `XXH3_SECRET_SIZE_MIN`; enables the optional archmage and whereat dependencies. |
+| `rapidhash` | no | Standard rapidhash v3, seeded/custom-secret functions and `RapidhashV3`; no runtime dependencies or allocation. |
+| `xxh32` | no | Classic XXH32 compatibility functions and `Xxh32`. |
+| `xxh64` | no | Classic XXH64 compatibility functions and `Xxh64`. |
 | `std` | yes | Runtime CPU detection for XXH3; `std::io::Write` for all enabled hashers. |
 | `avx512` | yes | Compiles the AVX-512 tier when `xxh3` is enabled; does not enable XXH3 by itself. On the benchmark CPU, XXH3-64 at 64 KiB ran at 42.3 GiB/s with it and 32.3 GiB/s without (separate runs). Measure on your hardware: AVX-512 behaves differently across CPU generations. |
 
-XXH32 and XXH64 are always available. To use them without XXH3 or its dependencies:
+To enable classic algorithms without XXH3 or its dependencies:
 
 ```toml
-zenhash = { version = "0.1.0", default-features = false }
+zenhash = { version = "0.1.0", default-features = false, features = ["xxh32", "xxh64"] }
 ```
 
 For XXH3 with `std` and runtime dispatch but without AVX-512:
@@ -143,15 +178,25 @@ uses compile-time target features. The internal `_dev` feature controls tier tes
 
 ## Testing
 
-Every algorithm is compared against two independent implementations,
-[xxhash-rust](https://crates.io/crates/xxhash-rust) and
-[twox-hash](https://crates.io/crates/twox-hash): every length from 0 to 300,
-block and buffer edges up to 100,003 bytes, four seeds, custom secrets from 136
-to 1000 bytes, and ten streaming split patterns. A tier-permutation test runs
-the XXH3 long path with each SIMD tier the machine has disabled in turn. CI runs
-the tests on x86-64 and aarch64 Linux, Windows and macOS, i686, and
-wasm32-wasip1 with and without SIMD128. A differential fuzz target lives in
-`fuzz/`.
+A fast C-reference conformance matrix fixes output expectations across every CI
+platform: all lengths 0–256 and 31 larger stripe/block/buffer boundaries, six byte
+patterns (zero, `0xff`, ascending, alternating, sparse and deterministic random),
+four seeds and six custom-secret sizes (136–1000 bytes). It covers every algorithm,
+both XXH3 widths, custom secrets and streaming splits. Compact fingerprints of
+canonical output bytes are generated by pinned C references, not this Rust port.
+The same matrix runs inside the isolated SIMD-tier permutation test.
+
+Additional tests compare xxHash against [xxhash-rust](https://crates.io/crates/xxhash-rust)
+and [twox-hash](https://crates.io/crates/twox-hash), and rapidhash v3 against the
+[rapidhash Rust port](https://crates.io/crates/rapidhash) and C golden vectors,
+including unaligned inputs and streaming splits. CI runs all algorithms on x86-64
+and aarch64 Linux/Windows, macOS ARM64, i686, s390x big-endian and WASM with and
+without SIMD128. Feature isolation and powerset checks run once on Linux.
+
+`just conformance` runs the bounded matrix; `just algorithm-tests` tests feature
+isolation. Reference sources, provenance and regeneration commands are documented
+in [tests/reference/README.md](https://github.com/imazen/zenhash/blob/main/tests/reference/README.md).
+A differential fuzz target lives in `fuzz/`.
 
 
 ## License

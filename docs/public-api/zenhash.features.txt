@@ -1,5 +1,5 @@
 # zenhash public API — additions from non-default features
-# features: avx512,std,xxh3
+# features: avx512,rapidhash,std,xxh3,xxh32,xxh64
 # (regenerated on every `cargo test` by zenutils-apidoc; ZEN_API_DOC=check verifies, =off skips).
 # Encodings: crate-name prefix stripped; auto traits collapse to a
 # count + exceptions; trait impls collapse to one roster line per
@@ -7,4 +7,50 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 
-(no additional public surface)
+## summary
+#
+#   pub types (struct/enum/trait/alias)         3
+#   free functions                              5
+#   inherent methods                           16
+#   trait roster entries (type × trait)        15
+#   auto-trait-complete types                   3
+#
+# per-module pub lines:
+#   (root)                           24
+
+## items (24 lines)
+
+pub struct RapidhashV3
+pub fn RapidhashV3::digest(&self) -> u64
+pub fn RapidhashV3::new() -> Self
+pub fn RapidhashV3::reset(&mut self)
+pub fn RapidhashV3::update(&mut self, &[u8])
+pub fn RapidhashV3::with_seed(u64) -> Self
+pub fn RapidhashV3::with_seed_and_secret(u64, [u64; 8]) -> Self
+pub struct Xxh32
+pub fn Xxh32::digest(&self) -> u32
+pub fn Xxh32::new() -> Self
+pub fn Xxh32::reset(&mut self)
+pub fn Xxh32::update(&mut self, &[u8])
+pub fn Xxh32::with_seed(u32) -> Self
+pub struct Xxh64
+pub fn Xxh64::digest(&self) -> u64
+pub fn Xxh64::new() -> Self
+pub fn Xxh64::reset(&mut self)
+pub fn Xxh64::update(&mut self, &[u8])
+pub fn Xxh64::with_seed(u64) -> Self
+pub fn rapidhash_v3(&[u8]) -> u64
+pub fn rapidhash_v3_with_seed(&[u8], u64) -> u64
+pub fn rapidhash_v3_with_seed_and_secret(&[u8], u64, &[u64; 8]) -> u64
+pub fn xxh32(&[u8], u32) -> u32
+pub fn xxh64(&[u8], u64) -> u64
+
+## trait impls (3 types)
+
+RapidhashV3: Clone, Debug, Default, Hasher, Write
+Xxh32: Clone, Debug, Default, Hasher, Write
+Xxh64: Clone, Debug, Default, Hasher, Write
+
+## auto traits
+
+3 types implement all of: Freeze, RefUnwindSafe, Send, Sync, Unpin, UnwindSafe
