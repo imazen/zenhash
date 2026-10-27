@@ -263,3 +263,11 @@ release-check:
     just readme-check
     cargo package --all-features
     cargo publish --dry-run --all-features
+
+# Full dependency policy, including optional algorithm dependencies.
+dependency-audit:
+    cargo deny --all-features check
+
+# First-release preview comparison; later releases also compare with crates.io.
+semver-baseline rev="origin/main":
+    cargo semver-checks --all-features --baseline-rev {{rev}}

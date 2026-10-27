@@ -8,6 +8,9 @@ extend-exclude = [
     "Cargo.lock",
     "*.min.js",
     "docs/public-api/*.txt",
+    "tests/reference/*.txt", # generated numeric golden hashes, not prose
+    "tests/reference/xxhash.h", # pinned upstream reference; keep byte-identical
+    "tests/reference/rapidhash.h",
     "benchmarks/",
 ]
 
@@ -17,6 +20,8 @@ extend-exclude = [
 # premiul = "premiul"    # matlab-era variable names in ported code
 
 [default.extend-words]
+# Upstream xxHash author surname.
+collet = "collet"
 # Domain vocabulary the english dictionary mis-flags:
 dssim = "dssim"
 ssim = "ssim"
