@@ -11,6 +11,7 @@
 - Use archmage 0.9.31-beta.2 with `attune` contexts (`bcbd64e5`).
 
 ### QUEUED BREAKING CHANGES
+- XXH3 now requires explicit `xxh3`; no hash algorithm is enabled by default (user-approved before first release).
 - `std::io::Write` now requires the separate, opt-in `io` feature; `std` alone only enables standard-library integration (`bcbd64e5`).
 - XXH32/XXH64 require opt-in `xxh32`/`xxh64` features (approved before the first release; follows `3dea22a4`).
 
@@ -24,7 +25,7 @@
   bounded streaming state, `Hasher` and optional `io::Write` (`16ab3213`).
 - Fast C-reference conformance matrix across algorithms, patterns, lengths,
   seeds and custom secrets on every CI platform and available SIMD tier.
-- Default-enabled `xxh3` feature gates XXH3 functions, streaming state,
+- Opt-in `xxh3` feature gates XXH3 functions, streaming state,
   custom-secret errors and optional SIMD/error dependencies; `std` and
   `avx512` do not enable XXH3 (`3dea22a4`).
 - Document safe-Rust and cross-ISA/WASM performance goals, published SMHasher3

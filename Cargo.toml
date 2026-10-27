@@ -22,12 +22,12 @@ exclude = [
 
 # Show every supported algorithm and the I/O adapter, without the internal test feature.
 [package.metadata.docs.rs]
-features = ["rapidhash", "fnv", "xxh32", "xxh64", "io"]
+features = ["xxh3", "rapidhash", "fnv", "xxh32", "xxh64", "io"]
 default-target = "x86_64-unknown-linux-gnu"
 targets = ["aarch64-unknown-linux-gnu", "wasm32-unknown-unknown"]
 
 [features]
-default = ["std", "xxh3", "avx512"]
+default = ["std", "avx512"]
 # Standard rapidhash v3, with portable output and allocation-free streaming.
 rapidhash = []
 # Stable FNV-1a compatibility fingerprints (32/64/128 bits).

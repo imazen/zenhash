@@ -1,6 +1,6 @@
 # zenhash — agent notes
 
-XXH3 64/128 (default), opt-in XXH64/XXH32, rapidhash v3 and FNV-1a in safe Rust (`#![forbid(unsafe_code)]`,
+Opt-in XXH3 64/128, XXH64/XXH32, rapidhash v3 and FNV-1a in safe Rust (`#![forbid(unsafe_code)]`,
 `no_std` + `alloc`), MIT OR Apache-2.0. Output must equal the reference C
 implementation bit for bit on every target and SIMD tier.
 
@@ -23,6 +23,8 @@ implementation bit for bit on every target and SIMD tier.
 
 - `src/rapidhash.rs`: standard rapidhash v3, seeded/custom-secret functions and bounded streaming state.
 - `src/fnv.rs`: FNV-1a32/64/128, caller-supplied offset bases and zen compatibility finalizers.
+- No algorithm is enabled by default. Default `std`/`avx512` options use weak dependency forwarding.
+- `core::hash::Hasher` (also re-exported as `std::hash::Hasher`) is always available for enabled hashers.
 - `std` enables CPU detection and standard error integration; only opt-in `io` adds `std::io::Write`.
 - `README.md` owns the shared landing-page content. `just readme` generates `README.crates.md`,
   included by the crate root and shipped as the crates.io README. `just docs` uses the public docs.rs feature set.

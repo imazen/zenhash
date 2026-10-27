@@ -6,50 +6,15 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: zenhash.txt 22 lines (supported surface) | zenhash.features.txt 57 added (features: avx512,fnv,io,rapidhash,std,xxh3,xxh32,xxh64) | zenhash.internal.txt 1 lines (1 hidden + 0 excluded-feature)
+# files: zenhash.txt 1 lines (supported surface) | zenhash.features.txt 76 added (features: avx512,fnv,io,rapidhash,std,xxh3,xxh32,xxh64) | zenhash.internal.txt 1 lines (1 hidden + 0 excluded-feature)
 
 ## summary
 #
 #   pub modules                                 1
-#   pub types (struct/enum/trait/alias)         2
-#   pub consts/statics                          1
-#   free functions                              6
-#   inherent methods                            7
-#   struct fields                               1
-#   enum variants                               1
-#   trait roster entries (type × trait)        10
-#   auto-trait-complete types                   2
 #
 # per-module pub lines:
-#   (root)                           19
+#   (root)                            1
 
-## items (19 lines)
+## items (1 lines)
 
 pub mod zenhash
-#[non_exhaustive] pub enum Error
-pub Error::SecretTooShort
-pub Error::SecretTooShort::len: usize
-pub struct Xxh3
-pub fn Xxh3::digest(&self) -> u64
-pub fn Xxh3::digest128(&self) -> u128
-pub fn Xxh3::new() -> Self
-pub fn Xxh3::reset(&mut self)
-pub fn Xxh3::update(&mut self, &[u8])
-pub fn Xxh3::with_secret(&[u8]) -> core::result::Result<Self, whereat::at::At<Error>>
-pub fn Xxh3::with_seed(u64) -> Self
-pub const XXH3_SECRET_SIZE_MIN: usize
-pub fn xxh3_128(&[u8]) -> u128
-pub fn xxh3_128_with_secret(&[u8], &[u8]) -> core::result::Result<u128, whereat::at::At<Error>>
-pub fn xxh3_128_with_seed(&[u8], u64) -> u128
-pub fn xxh3_64(&[u8]) -> u64
-pub fn xxh3_64_with_secret(&[u8], &[u8]) -> core::result::Result<u64, whereat::at::At<Error>>
-pub fn xxh3_64_with_seed(&[u8], u64) -> u64
-
-## trait impls (2 types)
-
-Error: Clone, Debug, Display, Eq, Error, PartialEq
-Xxh3: Clone, Debug, Default, Hasher
-
-## auto traits
-
-2 types implement all of: Freeze, RefUnwindSafe, Send, Sync, Unpin, UnwindSafe
