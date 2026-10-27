@@ -200,7 +200,7 @@ impl core::hash::Hasher for Xxh64 {
     }
 }
 
-#[cfg(feature = "std")]
+#[cfg(feature = "io")]
 impl std::io::Write for Xxh64 {
     #[inline]
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {

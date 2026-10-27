@@ -101,7 +101,7 @@ fn new_default_and_seed_zero_agree() {
     }
 }
 
-#[cfg(feature = "std")]
+#[cfg(feature = "io")]
 #[test]
 fn io_write_matches_one_shot() {
     use std::io::Write;

@@ -127,7 +127,7 @@ fn random_chunks_clone_reset_and_traits() {
     assert!(!debug.contains(&secret_word.to_string()));
 }
 
-#[cfg(feature = "std")]
+#[cfg(feature = "io")]
 #[test]
 fn io_write_matches_one_shot() {
     use std::io::Write;

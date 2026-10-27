@@ -282,7 +282,7 @@ impl core::hash::Hasher for RapidhashV3 {
     }
 }
 
-#[cfg(feature = "std")]
+#[cfg(feature = "io")]
 impl std::io::Write for RapidhashV3 {
     fn write(&mut self, bytes: &[u8]) -> std::io::Result<usize> {
         self.update(bytes);

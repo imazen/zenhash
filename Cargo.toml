@@ -23,6 +23,8 @@ exclude = [
 default = ["std", "xxh3", "avx512"]
 # Standard rapidhash v3, with portable output and allocation-free streaming.
 rapidhash = []
+# Stable FNV-1a compatibility fingerprints (32/64/128 bits).
+fnv = []
 # Classic algorithms for existing checksum and format interoperability.
 xxh32 = []
 xxh64 = []
@@ -31,6 +33,8 @@ xxh3 = ["dep:archmage", "dep:whereat"]
 # archmage detects CPU features at runtime only with its `std` feature. Without
 # it, dispatch sees only the features enabled at compile time.
 std = ["archmage?/std", "whereat?/std"]
+# Explicit I/O adapter; byte-slice and streaming APIs need neither feature.
+io = ["std"]
 # AVX-512 tier for the XXH3 accumulator. On by default; disable it with
 # `default-features = false, features = ["std", "xxh3"]` to save compile time.
 # Does not enable XXH3 by itself.
@@ -39,12 +43,12 @@ avx512 = ["archmage?/avx512"]
 _dev = ["archmage?/testable_dispatch"]
 
 [dependencies]
-archmage = { version = ">=0.9.29, <=0.9.31-beta.1", default-features = false, optional = true }
+archmage = { version = "=0.9.31-beta.2", default-features = false, optional = true }
 whereat = { version = "0.1.5", default-features = false, optional = true }
 
 [dev-dependencies]
 rapidhash = { version = "4.5.1", default-features = false }
-archmage = { version = ">=0.9.29, <=0.9.31-beta.1", features = ["std"] }
+archmage = { version = "=0.9.31-beta.2", features = ["std"] }
 twox-hash = { version = "2.1.5", default-features = false, features = ["std", "xxhash32", "xxhash64", "xxhash3_64", "xxhash3_128"] }
 xxhash-rust = { version = "0.8.19", features = ["xxh3", "xxh32", "xxh64"] }
 
