@@ -9,6 +9,10 @@
 
 #![cfg(feature = "xxh3")]
 
+#[cfg(all(feature = "xxh32", feature = "xxh64", feature = "rapidhash"))]
+#[path = "it/conformance.rs"]
+mod conformance;
+
 use archmage::testing::{CompileTimePolicy, for_each_token_permutation};
 
 /// Deterministic test bytes (splitmix64).
@@ -60,6 +64,8 @@ fn xxh3_long_paths_identical_on_every_tier() {
         })
         .collect();
     let report = for_each_token_permutation(CompileTimePolicy::Warn, |perm| {
+        #[cfg(all(feature = "xxh32", feature = "xxh64", feature = "rapidhash"))]
+        conformance::verify();
         for c in &cases {
             let d = &c.data;
             let len = d.len();

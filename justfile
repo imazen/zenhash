@@ -41,14 +41,16 @@ test-s390x-qemu:
 check-targets:
     cargo check --target thumbv7em-none-eabihf --no-default-features
     cargo check --target thumbv7em-none-eabihf --no-default-features --features xxh3
+    cargo check --target thumbv7em-none-eabihf --no-default-features --features rapidhash
     cargo check --target wasm32-unknown-unknown --no-default-features
     cargo check --target wasm32-unknown-unknown --no-default-features --features xxh3
+    cargo check --target wasm32-unknown-unknown --no-default-features --features rapidhash
     RUSTFLAGS="-Ctarget-feature=+simd128" cargo check --target wasm32-unknown-unknown
 
 # WASI tests under wasmtime, with and without SIMD128
 test-wasm:
-    CARGO_TARGET_WASM32_WASIP1_RUNNER="wasmtime --dir={{justfile_directory()}}::{{justfile_directory()}}" cargo test --target wasm32-wasip1 --lib --tests
-    RUSTFLAGS="-Ctarget-feature=+simd128" CARGO_TARGET_WASM32_WASIP1_RUNNER="wasmtime --dir={{justfile_directory()}}::{{justfile_directory()}}" cargo test --target wasm32-wasip1 --lib --tests
+    RUSTFLAGS="-Ctarget-feature=-simd128" CARGO_TARGET_WASM32_WASIP1_RUNNER="wasmtime --dir={{justfile_directory()}}::{{justfile_directory()}}" cargo test --target wasm32-wasip1 --all-features --lib --tests
+    RUSTFLAGS="-Ctarget-feature=+simd128" CARGO_TARGET_WASM32_WASIP1_RUNNER="wasmtime --dir={{justfile_directory()}}::{{justfile_directory()}}" cargo test --target wasm32-wasip1 --all-features --lib --tests
 
 msrv:
     cargo hack check --rust-version
@@ -82,25 +84,25 @@ fuzz target secs="600":
 
 # Benchmarks vs twox-hash and xxhash-rust: just bench, or just bench -- --format=md
 bench *ARGS:
-    cargo bench --bench hash {{ARGS}}
+    cargo bench --bench hash --features xxh32,xxh64 {{ARGS}}
 
 # Same, without the AVX-512 tier (what a CPU without AVX-512 runs)
 bench-no-avx512 *ARGS:
-    cargo bench --bench hash --no-default-features --features std,xxh3 {{ARGS}}
+    cargo bench --bench hash --no-default-features --features std,xxh3,xxh32,xxh64 {{ARGS}}
 
 # Adversarial: every competitor (incl. the C reference) built for this exact
 # CPU with fat LTO; zenhash gets the same flags. See benches/adversarial.rs.
 bench-adversarial *ARGS:
     RUSTFLAGS="-C target-cpu=native" CFLAGS="-O3 -march=native" \
     CARGO_PROFILE_BENCH_LTO=fat CARGO_PROFILE_BENCH_CODEGEN_UNITS=1 \
-    cargo bench --bench adversarial {{ARGS}}
+    cargo bench --bench adversarial --features xxh32,xxh64 {{ARGS}}
 
 # Same competitor setup, but zenhash as shipped: runtime dispatch only
 # (C still gets -march=native through CFLAGS; Rust crates get no native flags).
 bench-adversarial-shipped *ARGS:
     CFLAGS="-O3 -march=native" \
     CARGO_PROFILE_BENCH_LTO=fat CARGO_PROFILE_BENCH_CODEGEN_UNITS=1 \
-    cargo bench --bench adversarial {{ARGS}}
+    cargo bench --bench adversarial --features xxh32,xxh64 {{ARGS}}
 
 # Mutation testing (cargo install cargo-mutants); results in mutants.out/
 mutants *ARGS:
@@ -146,3 +148,48 @@ feature-gate-check: clippy check-targets test-wasm features api-doc
     cargo test --no-default-features --features std
     RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --all-features
     RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --no-default-features
+
+# Regenerate bounded text vectors from the pinned C reference, preserving an old copy.
+rapidhash-vectors:
+    mkdir -p target
+    cc -O2 -Wall -Wextra tools/rapidhash-reference.c -o target/rapidhash-reference
+    if [ -f tests/reference/rapidhash-v3.txt ]; then cp tests/reference/rapidhash-v3.txt tests/reference/rapidhash-v3.txt.bak; fi
+    target/rapidhash-reference > tests/reference/rapidhash-v3.txt
+
+bench-rapid *ARGS:
+    cargo bench --bench rapid --features rapidhash {{ARGS}}
+
+# Tests every algorithm in isolation, with and without std, and all together.
+algorithm-tests:
+    cargo test
+    cargo test --no-default-features
+    cargo test --no-default-features --features xxh3
+    cargo test --no-default-features --features xxh32
+    cargo test --no-default-features --features xxh64
+    cargo test --no-default-features --features rapidhash
+    cargo test --no-default-features --features std,rapidhash
+    cargo test --all-features
+
+# Regenerate compact C-reference expectations for all algorithms and secret variants.
+conformance-vectors:
+    mkdir -p target
+    cc -O2 -Wall -Wextra tools/hash-conformance.c -o target/hash-conformance
+    if [ -f tests/reference/conformance.txt ]; then cp tests/reference/conformance.txt tests/reference/conformance.txt.bak; fi
+    target/hash-conformance > tests/reference/conformance.txt
+
+# The bounded cross-platform corpus also runs inside the isolated SIMD-tier test.
+conformance:
+    cargo test --all-features --test it c_reference_conformance_matrix
+    cargo test --all-features --test tiers
+
+msrv-algorithms:
+    cargo +1.89 check --no-default-features --features xxh3,xxh32,xxh64,rapidhash
+
+rapid-check: algorithm-tests clippy clippy-arch check-targets test-wasm features api-doc msrv-algorithms fuzz-check
+    RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --all-features
+    RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --no-default-features
+
+# Sample an individual rapidhash benchmark without adding timers to hash code.
+profile-rapid group="rapidhash_v3/4":
+    if [ -f "${TMPDIR:?}/zenhash-rapid-perf.data" ]; then mv "${TMPDIR}/zenhash-rapid-perf.data" "${TMPDIR}/zenhash-rapid-perf-$(date -u +%Y%m%dT%H%M%S).data"; fi
+    perf record -e cpu-clock:u -g -o "${TMPDIR:?}/zenhash-rapid-perf.data" -- cargo bench --bench rapid --features rapidhash -- --no-busy-gate --group={{group}}

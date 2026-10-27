@@ -41,7 +41,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - name: Run benchmarks
         shell: bash
-        run: cargo bench --bench hash -- --no-busy-gate --format=md > bench-output.md
+        run: cargo bench --bench hash --features xxh32,xxh64 -- --no-busy-gate --format=md > bench-output.md
       - uses: actions/upload-artifact@v7
         if: always()
         with:

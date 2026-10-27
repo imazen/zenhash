@@ -71,6 +71,11 @@ pub(crate) fn verify() {
             let s128 = zenhash::xxh3_128_with_secret(&data, &secret).unwrap();
             let rapid = zenhash::rapidhash_v3_with_seed(&data, seed);
             let rapid_secret = zenhash::rapidhash_v3_with_seed_and_secret(&data, seed, &keys);
+            if seed == 0 {
+                assert_eq!(zenhash::xxh3_64(&data), h3);
+                assert_eq!(zenhash::xxh3_128(&data), h128);
+                assert_eq!(zenhash::rapidhash_v3(&data), rapid);
+            }
             for (index, value) in [
                 u64::from(h32),
                 h64,
@@ -99,6 +104,7 @@ pub(crate) fn verify() {
             let mut d = Xxh3::with_secret(&secret).unwrap();
             let mut e = RapidhashV3::with_seed(seed);
             let mut f = RapidhashV3::with_seed_and_secret(seed, keys);
+            let mut default3 = (seed == 0).then(Xxh3::new);
             for chunk in [&data[..split], &[], &data[split..]] {
                 a.update(chunk);
                 b.update(chunk);
@@ -106,6 +112,9 @@ pub(crate) fn verify() {
                 d.update(chunk);
                 e.update(chunk);
                 f.update(chunk);
+                if let Some(h) = &mut default3 {
+                    h.update(chunk);
+                }
             }
             let ctx = format!(
                 "pattern {pattern} seed {seed:x} secret {secret_len} len {len} split {split}"
@@ -118,6 +127,10 @@ pub(crate) fn verify() {
             assert_eq!(d.digest128(), s128, "{ctx}");
             assert_eq!(e.digest(), rapid, "{ctx}");
             assert_eq!(f.digest(), rapid_secret, "{ctx}");
+            if let Some(h) = default3 {
+                assert_eq!(h.digest(), h3, "{ctx}: default state");
+                assert_eq!(h.digest128(), h128, "{ctx}: default state");
+            }
             f.reset();
             f.update(&data);
             assert_eq!(f.digest(), rapid_secret, "{ctx}: reset preserves secret");

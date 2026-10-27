@@ -37,12 +37,10 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo test
       - run: cargo test --no-default-features
-      - run: cargo test --no-default-features --features std
-      - run: cargo test --no-default-features --features xxh3
-      - run: cargo test --no-default-features --features std,xxh3
       # --all-features includes `avx512` and `_dev`, so the tier-permutation
       # test also disables tiers the target guarantees at compile time.
-      - run: cargo test --all-features
+      - name: Test all algorithms against C outputs and SIMD tiers
+        run: cargo test --all-features
       # Code under cfg!(target_feature = ...) and incant!'s compile-time
       # dispatch only compile when the target features are on for all code.
       - name: Test with -C target-cpu=native
@@ -63,7 +61,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           key: cross-i686
-      - run: cross test --target i686-unknown-linux-gnu
+      - run: cross test --target i686-unknown-linux-gnu --all-features
       - run: cross test --target i686-unknown-linux-gnu --no-default-features
       - run: cross test --target i686-unknown-linux-gnu --no-default-features --features xxh3
 
@@ -81,7 +79,7 @@ jobs:
           key: cross-s390x
       # The only CI target where SIMD dispatch is skipped for byte order and
       # every little-endian read must byte-swap.
-      - run: cross test --target s390x-unknown-linux-gnu
+      - run: cross test --target s390x-unknown-linux-gnu --all-features
 
   wasm:
     name: WASM (wasm32-unknown-unknown check, wasm32-wasip1 tests)
@@ -99,8 +97,11 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo check --target wasm32-unknown-unknown --no-default-features
       - run: cargo check --target wasm32-unknown-unknown --no-default-features --features xxh3
-      - run: cargo test --target wasm32-wasip1 --lib --tests
-      - run: cargo test --target wasm32-wasip1 --lib --tests
+      - run: cargo check --target wasm32-unknown-unknown --no-default-features --features rapidhash
+      - run: cargo test --target wasm32-wasip1 --all-features --lib --tests
+        env:
+          RUSTFLAGS: -D warnings -Ctarget-feature=-simd128
+      - run: cargo test --target wasm32-wasip1 --all-features --lib --tests
         env:
           RUSTFLAGS: -D warnings -Ctarget-feature=+simd128
 
@@ -115,6 +116,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo check --target thumbv7em-none-eabihf --no-default-features
       - run: cargo check --target thumbv7em-none-eabihf --no-default-features --features xxh3
+      - run: cargo check --target thumbv7em-none-eabihf --no-default-features --features rapidhash
 
   msrv:
     name: MSRV (rust-version from Cargo.toml)
@@ -124,7 +126,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: taiki-e/install-action@cargo-hack
       - uses: Swatinem/rust-cache@v2
-      - run: cargo hack check --rust-version
+      - run: cargo hack check --rust-version --all-features
 
   features:
     name: Feature powerset
@@ -135,6 +137,19 @@ jobs:
       - uses: taiki-e/install-action@cargo-hack
       - uses: Swatinem/rust-cache@v2
       - run: cargo hack check --feature-powerset --no-dev-deps
+      - name: Test each algorithm alone (no_std library)
+        shell: bash
+        run: |
+          for algorithm in xxh3 xxh32 xxh64 rapidhash; do
+            cargo test --no-default-features --features "$algorithm"
+          done
+      - run: cargo test --no-default-features --features std,rapidhash
+      - name: Verify pinned C reference fixtures
+        shell: bash
+        run: |
+          cc -O2 -Wall -Wextra tools/hash-conformance.c -o target/hash-conformance
+          target/hash-conformance > target/conformance.txt
+          diff -u tests/reference/conformance.txt target/conformance.txt
 
   lint:
     name: fmt, clippy, docs
@@ -188,8 +203,8 @@ jobs:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - run: cargo bench --no-run
-      - run: cargo bench --no-run --no-default-features --features std,xxh3
+      - run: cargo bench --no-run --all-features
+      - run: cargo bench --no-run --no-default-features --features std,xxh3,xxh32,xxh64,rapidhash
 
   fuzz-build:
     name: Fuzz targets compile
