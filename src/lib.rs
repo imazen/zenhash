@@ -38,6 +38,12 @@ whereat::define_at_crate_info!();
     feature = "rapidhash"
 ))]
 mod common;
+#[cfg(feature = "fnv")]
+mod fnv;
+#[cfg(feature = "fnv")]
+pub use fnv::{
+    Fnv1a32, Fnv1a64, Fnv1a128, fnv1a32, fnv1a64, fnv1a64_fmix, fnv1a64_fold32, fnv1a128,
+};
 #[cfg(feature = "rapidhash")]
 mod rapidhash;
 
