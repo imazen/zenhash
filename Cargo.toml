@@ -7,6 +7,7 @@ license = "MIT OR Apache-2.0"
 description = "Portable hashing and streaming in safe Rust: XXH3, rapidhash v3 and FNV compatibility."
 repository = "https://github.com/imazen/zenhash"
 documentation = "https://docs.rs/zenhash"
+homepage = "https://github.com/imazen/zenhash"
 readme = "README.crates.md"
 keywords = ["hash", "xxhash", "xxh3", "simd", "no-std"]
 categories = ["algorithms", "no-std"]
@@ -18,6 +19,12 @@ exclude = [
     "/CLAUDE.md", "/AGENTS.md", "/codecov.yml", "/*.log", "/*.sh", "/*.py",
     "/clippy.toml", "/deny.toml", "/_typos.toml", "/.gitignore",
 ]
+
+# Show every supported algorithm and the I/O adapter, without the internal test feature.
+[package.metadata.docs.rs]
+features = ["rapidhash", "fnv", "xxh32", "xxh64", "io"]
+default-target = "x86_64-unknown-linux-gnu"
+targets = ["aarch64-unknown-linux-gnu", "wasm32-unknown-unknown"]
 
 [features]
 default = ["std", "xxh3", "avx512"]

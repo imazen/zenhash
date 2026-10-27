@@ -237,3 +237,29 @@ profile-hash mode algorithm len chunk outer repetitions:
 stability-wasm-wide:
     RUSTFLAGS="-Ctarget-feature=-simd128,+wide-arithmetic" CARGO_TARGET_WASM32_WASIP1_RUNNER="wasmtime -Wwide-arithmetic=y" cargo test --manifest-path tools/stability/Cargo.toml --target wasm32-wasip1 --all-features
     RUSTFLAGS="-Ctarget-feature=+simd128,+wide-arithmetic" CARGO_TARGET_WASM32_WASIP1_RUNNER="wasmtime -Wwide-arithmetic=y" cargo test --manifest-path tools/stability/Cargo.toml --target wasm32-wasip1 --all-features
+
+# Public docs.rs feature set, excluding the internal dispatch-test feature.
+docs:
+    RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --features rapidhash,fnv,xxh32,xxh64,io
+
+docs-open:
+    cargo doc --no-deps --features rapidhash,fnv,xxh32,xxh64,io --open
+
+# Regenerate the crates.io/docs.rs landing page and reject stale committed output.
+readme-check:
+    @just readme
+    git diff --exit-code -- README.crates.md
+
+# Release preparation; tagging, release creation and publishing are separate actions.
+release-check:
+    cargo fmt --check
+    cargo clippy --all-targets --all-features -- -D warnings
+    cargo test --all-targets
+    cargo test --all-features
+    cargo test --doc --all-features
+    cargo test --doc
+    just docs
+    just api-doc-check
+    just readme-check
+    cargo package --all-features
+    cargo publish --dry-run --all-features

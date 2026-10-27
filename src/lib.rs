@@ -1,26 +1,4 @@
-//! zenhash implements XXH3, classic xxHash, standard rapidhash v3 and FNV-1a
-//! compatibility formulas in safe Rust, with runtime SIMD dispatch for long XXH3 inputs.
-//!
-//! ```
-//! # #[cfg(feature = "xxh3")]
-//! # {
-//! let h64 = zenhash::xxh3_64(b"hello world");
-//! let h128 = zenhash::xxh3_128(b"hello world");
-//! assert_eq!(h64, 0xD447_B1EA_40E6_988B);
-//! assert_eq!(h128, 0xDF8D_09E9_3F87_4900_A99B_8775_CC15_B6C7);
-//! # }
-//! ```
-//!
-//! The default-enabled `xxh3` feature provides XXH3 and its custom-secret errors.
-//! `rapidhash`, `fnv`, `xxh32` and `xxh64` are opt-in algorithm features.
-//! Byte-slice and streaming APIs are Sans-I/O; `std` enables CPU detection and
-//! the separate opt-in `io` feature provides `std::io::Write`. The goal is safe Rust with
-//! competitive performance on x86, ARM and WebAssembly; performance parity
-//! across ISAs remains a measurement goal. XXH3 is non-cryptographic: see the
-//! [usage guidance](https://github.com/imazen/zenhash/blob/main/docs/xxh3-quality.md).
-//!
-//! Values are checked against two independent Rust implementations
-//! (xxhash-rust and twox-hash) on every SIMD tier the test machine has.
+#![doc = include_str!("../README.crates.md")]
 #![no_std]
 #![forbid(unsafe_code)]
 #![warn(missing_docs)]
@@ -73,11 +51,6 @@ pub use xxh3::{
 pub use xxh32::{Xxh32, xxh32};
 #[cfg(feature = "xxh64")]
 pub use xxh64::{Xxh64, xxh64};
-
-/// Runs the README's code blocks as doctests.
-#[cfg(doctest)]
-#[doc = include_str!("../README.md")]
-struct ReadmeDoctests;
 
 /// `std` alone does not opt into the I/O adapter.
 ///
