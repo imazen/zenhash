@@ -20,7 +20,48 @@ mod stability;
 #[path = "support/fnv.rs"]
 mod fnv;
 
+#[cfg(any(
+    target_arch = "x86_64",
+    target_arch = "aarch64",
+    target_arch = "wasm32"
+))]
+use archmage::SimdToken;
 use archmage::testing::{CompileTimePolicy, for_each_token_permutation};
+
+// Several token permutations select the same kernel. Keep the original cases
+// on every permutation, but run the expanded corpus once per selected kernel.
+fn selected_tier() -> &'static str {
+    if cfg!(target_endian = "big") {
+        return "scalar";
+    }
+    #[cfg(all(target_arch = "x86_64", feature = "avx512"))]
+    {
+        if archmage::X64V4xToken::summon().is_some() {
+            return "v4x";
+        }
+        if archmage::X64V4Token::summon().is_some() {
+            return "v4";
+        }
+    }
+    #[cfg(target_arch = "x86_64")]
+    {
+        if archmage::X64V3Token::summon().is_some() {
+            return "v3";
+        }
+        if archmage::X64V1Token::summon().is_some() {
+            return "v1";
+        }
+    }
+    #[cfg(target_arch = "aarch64")]
+    if archmage::NeonToken::summon().is_some() {
+        return "neon";
+    }
+    #[cfg(target_arch = "wasm32")]
+    if archmage::Wasm128Token::summon().is_some() {
+        return "wasm128";
+    }
+    "scalar"
+}
 
 /// Deterministic test bytes (splitmix64).
 fn test_bytes(len: usize, seed: u64) -> Vec<u8> {
@@ -70,8 +111,11 @@ fn xxh3_long_paths_identical_on_every_tier() {
             }
         })
         .collect();
+    let mut expanded_tiers = std::collections::BTreeSet::new();
     let report = for_each_token_permutation(CompileTimePolicy::Warn, |perm| {
-        stability::verify();
+        if expanded_tiers.insert(selected_tier()) {
+            stability::verify();
+        }
         #[cfg(all(feature = "xxh32", feature = "xxh64", feature = "rapidhash"))]
         conformance::verify();
         for c in &cases {
@@ -118,7 +162,7 @@ fn xxh3_long_paths_identical_on_every_tier() {
             }
         }
     });
-    eprintln!("{report}");
+    eprintln!("{report}; expanded corpus tiers: {expanded_tiers:?}");
     // With `_dev` (all-features), every tier down to scalar is reachable.
     #[cfg(all(feature = "_dev", target_arch = "x86_64", feature = "avx512"))]
     assert!(report.permutations_run >= 4, "{report}");
