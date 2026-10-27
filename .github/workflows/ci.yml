@@ -37,6 +37,8 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo test
       - run: cargo test --no-default-features
+      - name: Run all algorithms with a genuinely no_std dependency graph
+        run: cargo test --manifest-path tools/stability/Cargo.toml --no-default-features --features xxh3,xxh32,xxh64,rapidhash,fnv
       # --all-features includes `avx512` and `_dev`, so the tier-permutation
       # test also disables tiers the target guarantees at compile time.
       - name: Test all algorithms against C outputs and SIMD tiers
@@ -98,10 +100,16 @@ jobs:
       - run: cargo check --target wasm32-unknown-unknown --no-default-features
       - run: cargo check --target wasm32-unknown-unknown --no-default-features --features xxh3
       - run: cargo check --target wasm32-unknown-unknown --no-default-features --features rapidhash
-      - run: cargo test --target wasm32-wasip1 --all-features --lib --tests
+      - shell: bash
+        run: |
+          cargo test --target wasm32-wasip1 --all-features --lib --tests
+          cargo test --manifest-path tools/stability/Cargo.toml --target wasm32-wasip1 --no-default-features --features xxh3,xxh32,xxh64,rapidhash,fnv
         env:
           RUSTFLAGS: -D warnings -Ctarget-feature=-simd128
-      - run: cargo test --target wasm32-wasip1 --all-features --lib --tests
+      - shell: bash
+        run: |
+          cargo test --target wasm32-wasip1 --all-features --lib --tests
+          cargo test --manifest-path tools/stability/Cargo.toml --target wasm32-wasip1 --no-default-features --features xxh3,xxh32,xxh64,rapidhash,fnv
         env:
           RUSTFLAGS: -D warnings -Ctarget-feature=+simd128
 
@@ -117,6 +125,7 @@ jobs:
       - run: cargo check --target thumbv7em-none-eabihf --no-default-features
       - run: cargo check --target thumbv7em-none-eabihf --no-default-features --features xxh3
       - run: cargo check --target thumbv7em-none-eabihf --no-default-features --features rapidhash
+      - run: cargo check --target thumbv7em-none-eabihf --no-default-features --features fnv
 
   msrv:
     name: MSRV (rust-version from Cargo.toml)
@@ -140,7 +149,7 @@ jobs:
       - name: Test each algorithm alone (no_std library)
         shell: bash
         run: |
-          for algorithm in xxh3 xxh32 xxh64 rapidhash; do
+          for algorithm in xxh3 xxh32 xxh64 rapidhash fnv; do
             cargo test --no-default-features --features "$algorithm"
           done
       - run: cargo test --no-default-features --features std,rapidhash
@@ -150,6 +159,31 @@ jobs:
           cc -O2 -Wall -Wextra tools/hash-conformance.c -o target/hash-conformance
           target/hash-conformance > target/conformance.txt
           diff -u tests/reference/conformance.txt target/conformance.txt
+          cc -O2 -Wall -Wextra -Werror tools/hash-conformance-extended.c -o target/conformance-extended
+          target/conformance-extended > target/conformance-extended.txt
+          diff -u tests/reference/conformance-extended.txt target/conformance-extended.txt
+          cc -O2 -Wall -Wextra -Werror tools/fnv-reference.c -o target/fnv-reference
+          target/fnv-reference > target/fnv.txt
+          diff -u tests/reference/fnv.txt target/fnv.txt
+          target/fnv-reference bases > target/fnv-bases.txt
+          diff -u tests/reference/fnv-bases.txt target/fnv-bases.txt
+
+  stability-configs:
+    name: Runtime feature powerset (${{ matrix.shard }}/8)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6, 7, 8]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: taiki-e/install-action@cargo-hack
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: tools/stability
+          key: stability-${{ matrix.shard }}
+      - run: cargo hack test --manifest-path tools/stability/Cargo.toml --feature-powerset --partition ${{ matrix.shard }}/8
 
   lint:
     name: fmt, clippy, docs
