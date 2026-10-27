@@ -75,7 +75,8 @@ slice reads and `u128` multiplication, matching the C reference
 [at this revision](https://github.com/Nicoshev/rapidhash/blob/1ae7842f59f25929a338e5a76e3fa350673e48e1/rapidhash.h).
 Micro, Nano, protected mode and randomized secret generation are not included.
 The [native measurements](https://github.com/imazen/zenhash/blob/main/benchmarks/rapidhash_v3_final_2026-10-26.md)
-include the remaining streaming gap; ARM and WASM throughput have not been measured.
+include the remaining streaming gap. The [ARM/Wasmtime report](../benchmarks/arm_wasm_2026-10-26.md)
+measures native NEON and four WASM configurations, including experimental wide arithmetic.
 Passing statistical tests does not make it cryptographic. Seed-only APIs keep
 the public default secrets; do not use them for attacker-controlled hash-table
 keys. Custom secrets do not establish cryptographic security either.
