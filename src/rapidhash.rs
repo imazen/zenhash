@@ -108,7 +108,7 @@ pub fn rapidhash_v3(data: &[u8]) -> u64 {
 #[must_use]
 #[inline]
 pub fn rapidhash_v3_with_seed(data: &[u8], seed: u64) -> u64 {
-    rapidhash_v3_with_seed_and_secret(data, seed, &SECRET)
+    hash::<true>(data, seed, &SECRET)
 }
 
 /// Computes standard rapidhash v3 with an explicit seed and eight secret words.
@@ -118,10 +118,24 @@ pub fn rapidhash_v3_with_seed(data: &[u8], seed: u64) -> u64 {
 #[must_use]
 #[inline]
 pub fn rapidhash_v3_with_seed_and_secret(data: &[u8], seed: u64, secret: &[u64; 8]) -> u64 {
+    hash::<false>(data, seed, secret)
+}
+
+#[inline]
+fn hash<const DEFAULT_SECRET: bool>(data: &[u8], seed: u64, secret: &[u64; 8]) -> u64 {
+    let secret = if DEFAULT_SECRET { &SECRET } else { secret };
     let seed = init(seed, secret);
     if data.len() <= 16 {
         return short(data, seed, secret);
     }
+    long_input::<DEFAULT_SECRET>(data, seed, secret)
+}
+
+// Keep the seven-lane register state out of short callers' prologues. The
+// default-secret specialization still folds secret loads into constants.
+#[inline(never)]
+fn long_input<const DEFAULT_SECRET: bool>(data: &[u8], seed: u64, secret: &[u64; 8]) -> u64 {
+    let secret = if DEFAULT_SECRET { &SECRET } else { secret };
     let mut lanes = [seed; 7];
     let mut tail = data;
     while tail.len() > 112 {
@@ -205,12 +219,16 @@ impl RapidhashV3 {
             self.buf_len = 0;
             self.long = true;
         }
+        let original = data;
         while data.len() > 112 {
             let (block, rest) = data.split_first_chunk::<112>().unwrap();
             consume(&mut self.lanes, block, &self.secret);
-            self.buf[..16].copy_from_slice(&block[96..]);
             self.long = true;
             data = rest;
+        }
+        let consumed = original.len() - data.len();
+        if consumed > 0 {
+            self.buf[..16].copy_from_slice(&original[consumed - 16..consumed]);
         }
         self.buf[16..16 + data.len()].copy_from_slice(data);
         self.buf_len = data.len();

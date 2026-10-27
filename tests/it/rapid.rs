@@ -118,11 +118,13 @@ fn random_chunks_clone_reset_and_traits() {
     a.write_u64(0x0102030405060708);
     b.update(&0x0102030405060708u64.to_ne_bytes());
     assert_eq!(a.finish(), b.finish());
-    let mut h = zenhash::RapidhashV3::with_seed(u64::MAX);
+    let secret_word = 0xabab_abab_abab_abab;
+    let mut h = zenhash::RapidhashV3::with_seed_and_secret(u64::MAX, [secret_word; 8]);
     h.update(b"SENSITIVE");
     let debug = format!("{h:?}");
     assert!(debug.contains("total_len: 9"));
     assert!(!debug.contains("SENSITIVE") && !debug.contains(&u64::MAX.to_string()));
+    assert!(!debug.contains(&secret_word.to_string()));
 }
 
 #[cfg(feature = "std")]
