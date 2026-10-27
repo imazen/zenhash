@@ -29,13 +29,13 @@ clippy-arch:
 test-aarch64-qemu:
     CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc \
     CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_RUNNER="qemu-aarch64 -L /usr/aarch64-linux-gnu" \
-    cargo test --target aarch64-unknown-linux-gnu --features _dev
+    cargo test --target aarch64-unknown-linux-gnu --features xxh3,_dev
 
 # Big-endian (scalar path, byte-swapping reads) under qemu (apt: qemu-user gcc-s390x-linux-gnu)
 test-s390x-qemu:
     CARGO_TARGET_S390X_UNKNOWN_LINUX_GNU_LINKER=s390x-linux-gnu-gcc \
     CARGO_TARGET_S390X_UNKNOWN_LINUX_GNU_RUNNER="qemu-s390x -L /usr/s390x-linux-gnu" \
-    cargo test --target s390x-unknown-linux-gnu
+    cargo test --target s390x-unknown-linux-gnu --features xxh3
 
 # no_std and wasm builds
 check-targets:
@@ -45,7 +45,7 @@ check-targets:
     cargo check --target wasm32-unknown-unknown --no-default-features
     cargo check --target wasm32-unknown-unknown --no-default-features --features xxh3
     cargo check --target wasm32-unknown-unknown --no-default-features --features rapidhash
-    RUSTFLAGS="-Ctarget-feature=+simd128" cargo check --target wasm32-unknown-unknown
+    RUSTFLAGS="-Ctarget-feature=+simd128" cargo check --target wasm32-unknown-unknown --features xxh3
 
 # WASI tests under wasmtime, with and without SIMD128
 test-wasm:
@@ -84,7 +84,7 @@ fuzz target secs="600":
 
 # Benchmarks vs twox-hash and xxhash-rust: just bench, or just bench -- --format=md
 bench *ARGS:
-    cargo bench --bench hash --features xxh32,xxh64 {{ARGS}}
+    cargo bench --bench hash --features xxh3,xxh32,xxh64 {{ARGS}}
 
 # Same, without the AVX-512 tier (what a CPU without AVX-512 runs)
 bench-no-avx512 *ARGS:
@@ -95,14 +95,14 @@ bench-no-avx512 *ARGS:
 bench-adversarial *ARGS:
     RUSTFLAGS="-C target-cpu=native" CFLAGS="-O3 -march=native" \
     CARGO_PROFILE_BENCH_LTO=fat CARGO_PROFILE_BENCH_CODEGEN_UNITS=1 \
-    cargo bench --bench adversarial --features xxh32,xxh64 {{ARGS}}
+    cargo bench --bench adversarial --features xxh3,xxh32,xxh64 {{ARGS}}
 
 # Same competitor setup, but zenhash as shipped: runtime dispatch only
 # (C still gets -march=native through CFLAGS; Rust crates get no native flags).
 bench-adversarial-shipped *ARGS:
     CFLAGS="-O3 -march=native" \
     CARGO_PROFILE_BENCH_LTO=fat CARGO_PROFILE_BENCH_CODEGEN_UNITS=1 \
-    cargo bench --bench adversarial --features xxh32,xxh64 {{ARGS}}
+    cargo bench --bench adversarial --features xxh3,xxh32,xxh64 {{ARGS}}
 
 # Mutation testing (cargo install cargo-mutants); results in mutants.out/
 mutants *ARGS:
@@ -240,10 +240,10 @@ stability-wasm-wide:
 
 # Public docs.rs feature set, excluding the internal dispatch-test feature.
 docs:
-    RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --features rapidhash,fnv,xxh32,xxh64,io
+    RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --features xxh3,rapidhash,fnv,xxh32,xxh64,io
 
 docs-open:
-    cargo doc --no-deps --features rapidhash,fnv,xxh32,xxh64,io --open
+    cargo doc --no-deps --features xxh3,rapidhash,fnv,xxh32,xxh64,io --open
 
 # Regenerate the crates.io/docs.rs landing page and reject stale committed output.
 readme-check:
@@ -258,6 +258,7 @@ release-check:
     cargo test --all-features
     cargo test --doc --all-features
     cargo test --doc
+    cargo test --doc --features xxh3
     just docs
     just api-doc-check
     just readme-check

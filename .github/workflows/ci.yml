@@ -36,6 +36,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: cargo test
+      - name: Test explicitly enabled XXH3 and its README examples
+        run: cargo test --features xxh3
       - run: cargo test --no-default-features
       - name: Run all algorithms with a genuinely no_std dependency graph
         run: cargo test --manifest-path tools/stability/Cargo.toml --no-default-features --features xxh3,xxh32,xxh64,rapidhash,fnv
