@@ -8,15 +8,25 @@
 
 ### Dependency compatibility
 
-- Admit archmage 0.9.31-beta.1 in the current-main tool graph while retaining compatible stable requirements (`e2261fa1`). Strict library lint, all 20 integration tests, the separate tier-parity test and 13 doctests pass.
+- Use archmage 0.9.31-beta.2 with `attune` contexts (`bcbd64e5`).
 
 ### QUEUED BREAKING CHANGES
-<!-- Breaks that ship together in the next leading-digit bump (0.x: the minor). None yet. -->
+- `std::io::Write` now requires the separate, opt-in `io` feature; `std` alone only enables standard-library integration (`bcbd64e5`).
+- XXH32/XXH64 require opt-in `xxh32`/`xxh64` features (approved before the first release; follows `3dea22a4`).
 
 ### Added
+- README API quick reference and shared crates.io/docs.rs landing page; docs.rs builds every public algorithm and the optional I/O adapter.
+- Preserve the xxHash BSD-2-Clause notice alongside the crate MIT/Apache-2.0 and rapidhash MIT licenses.
+- Opt-in FNV-1a32/64/128 compatibility APIs, continuation offset bases, XOR-folding and fmix64 finalization (`ce5540f5`).
+- Expanded independent C stability fixtures and isolated runtime feature powerset tests.
+- XXH3 uses archmage 0.9.31-beta.2 `attune` contexts, preferring v4x with v4 fallback.
+- Opt-in safe standard rapidhash v3: one-shot, seeded/custom-secret APIs,
+  bounded streaming state, `Hasher` and optional `io::Write` (`16ab3213`).
+- Fast C-reference conformance matrix across algorithms, patterns, lengths,
+  seeds and custom secrets on every CI platform and available SIMD tier.
 - Default-enabled `xxh3` feature gates XXH3 functions, streaming state,
-  custom-secret errors and optional SIMD/error dependencies. XXH32/XXH64
-  remain available without it; `std` and `avx512` do not enable XXH3.
+  custom-secret errors and optional SIMD/error dependencies; `std` and
+  `avx512` do not enable XXH3 (`3dea22a4`).
 - Document safe-Rust and cross-ISA/WASM performance goals, published SMHasher3
   findings, and guidance for trusted, statistical and adversarial workloads.
 - `xxh3_64`, `xxh3_128` and their `_with_seed` / `_with_secret` variants;
@@ -29,6 +39,8 @@
   feature, on by default), AVX2, SSE2, NEON, WASM SIMD128 and scalar (1c0b386)
 
 ### Performance
+- Pair 32-bit factors in XXH3's WASM and NEON accumulators; add WASM entry-point
+  inlining, with C parity and ARM/Wasmtime measurements (`e9e91d60`, `18eedee8`, `574f1fb8`).
 - XXH3 129..=240 B: unrolled, scalar mid-size paths (2x faster at 240 B)
   (875fb62, 18186a3)
 - XXH3 long inputs: whole-block fast path, `srli` instead of a second

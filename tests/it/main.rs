@@ -1,12 +1,41 @@
+#![cfg(any(
+    feature = "xxh3",
+    feature = "xxh32",
+    feature = "xxh64",
+    feature = "rapidhash",
+    feature = "fnv"
+))]
+
 // One integration-test binary: every top-level file in tests/ links
 // separately, so new test files go here as modules.
+#[cfg(any(feature = "xxh3", feature = "xxh32", feature = "xxh64"))]
 mod api;
 #[cfg(feature = "xxh3")]
 mod fuzz_regression;
+#[cfg(any(feature = "xxh3", feature = "xxh32", feature = "xxh64"))]
 mod oracle;
+#[cfg(any(feature = "xxh3", feature = "xxh32", feature = "xxh64"))]
 mod random;
+#[cfg(any(feature = "xxh3", feature = "xxh32", feature = "xxh64"))]
 mod vectors;
 
+#[cfg(feature = "rapidhash")]
+mod rapid;
+
+#[cfg(all(
+    feature = "xxh3",
+    feature = "xxh32",
+    feature = "xxh64",
+    feature = "rapidhash"
+))]
+mod conformance;
+
+#[cfg(any(
+    feature = "xxh3",
+    feature = "xxh32",
+    feature = "xxh64",
+    feature = "rapidhash"
+))]
 /// Deterministic test bytes (splitmix64), so failures reproduce.
 pub(crate) fn test_bytes(len: usize, seed: u64) -> Vec<u8> {
     let mut state = seed.wrapping_add(0x9E37_79B9_7F4A_7C15);
@@ -23,6 +52,7 @@ pub(crate) fn test_bytes(len: usize, seed: u64) -> Vec<u8> {
 }
 
 /// Lengths that hit every XXH3 path boundary plus block and buffer edges.
+#[cfg(any(feature = "xxh3", feature = "xxh32", feature = "xxh64"))]
 pub(crate) fn interesting_lengths() -> Vec<usize> {
     let mut v: Vec<usize> = (0..=300).collect();
     for base in [
@@ -33,3 +63,30 @@ pub(crate) fn interesting_lengths() -> Vec<usize> {
     }
     v
 }
+
+#[cfg(all(
+    feature = "xxh3",
+    feature = "xxh32",
+    feature = "xxh64",
+    feature = "rapidhash"
+))]
+#[test]
+fn c_reference_conformance_matrix() {
+    conformance::verify();
+}
+
+#[path = "../support/stability.rs"]
+mod stability;
+#[cfg(any(
+    feature = "xxh3",
+    feature = "xxh32",
+    feature = "xxh64",
+    feature = "rapidhash"
+))]
+#[test]
+fn expanded_stability() {
+    stability::verify();
+}
+#[cfg(feature = "fnv")]
+#[path = "../support/fnv.rs"]
+mod fnv;

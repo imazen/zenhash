@@ -180,7 +180,7 @@ impl core::hash::Hasher for Xxh32 {
     }
 }
 
-#[cfg(feature = "std")]
+#[cfg(feature = "io")]
 impl std::io::Write for Xxh32 {
     #[inline]
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {

@@ -1,0 +1,2 @@
+# Preserve vendored reference headers verbatim, including upstream whitespace.
+tests/reference/*.h -whitespace

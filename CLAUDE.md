@@ -1,6 +1,6 @@
 # zenhash — agent notes
 
-xxHash (XXH3 64/128, XXH64, XXH32) in safe Rust (`#![forbid(unsafe_code)]`,
+XXH3 64/128 (default), opt-in XXH64/XXH32, rapidhash v3 and FNV-1a in safe Rust (`#![forbid(unsafe_code)]`,
 `no_std` + `alloc`), MIT OR Apache-2.0. Output must equal the reference C
 implementation bit for bit on every target and SIMD tier.
 
@@ -11,7 +11,7 @@ implementation bit for bit on every target and SIMD tier.
   long-input finalization, one-shot API.
 - `src/xxh3/accumulate.rs`: the stripe accumulator, the only SIMD code. One
   shared loop (`consume_body!`) stamped per tier with four helpers (load, store,
-  accumulate one 64-byte stripe, scramble). Tiers: v4 (`avx512` feature, on by
+  accumulate one 64-byte stripe, scramble). Tiers: v4x then v4 (`avx512` feature, on by
   default), v3,
   v1 (SSE2), neon, wasm128, scalar. Dispatch is one `incant!` per `consume`
   call. Big-endian targets always take scalar.
@@ -20,6 +20,12 @@ implementation bit for bit on every target and SIMD tier.
   digest's "previous 64 bytes" case).
 - `src/xxh64.rs`, `src/xxh32.rs`: classic algorithms, scalar only (the C
   reference has no SIMD path for them either).
+
+- `src/rapidhash.rs`: standard rapidhash v3, seeded/custom-secret functions and bounded streaming state.
+- `src/fnv.rs`: FNV-1a32/64/128, caller-supplied offset bases and zen compatibility finalizers.
+- `std` enables CPU detection and standard error integration; only opt-in `io` adds `std::io::Write`.
+- `README.md` owns the shared landing-page content. `just readme` generates `README.crates.md`,
+  included by the crate root and shipped as the crates.io README. `just docs` uses the public docs.rs feature set.
 
 ## Recipes
 
@@ -52,7 +58,7 @@ implementation bit for bit on every target and SIMD tier.
   across all path boundaries, seeds, secret sizes 136..1000 and streaming
   splits. The fuzz target (`fuzz/fuzz_targets/hash_parity_core.rs`) does the
   same and is replayed by `tests/it/fuzz_regression.rs`.
-- **Why intrinsics, not magetypes:** magetypes 0.9.29 `u64x*` vectors have no
+- **Why intrinsics, not magetypes:** magetypes 0.9.31-beta.2 `u64x*` vectors have no
   32x32->64 widening multiply (`pmuludq`/`vmull_u32`/`extmul`) and no 64-bit
   lane swap. XXH3 needs both on every stripe. If magetypes gains them, the
   x86/NEON/WASM tiers could collapse into one `#[magetypes]` kernel over
@@ -189,3 +195,12 @@ runners; supply its tool input explicitly. The installed executable then
 defaulted to a musl target, which failed ASan/static-libc compatibility and
 core discovery. The fuzz command now selects the runner architecture with
 `-unknown-linux-gnu` explicitly. No corpus, oracle or assertion was changed.
+
+
+### 2026-10-27: native CI artifact isolation
+
+A Linux `target-cpu=native` step triggered SIGILL after restoring build
+artifacts; portable builds passed. Native-CPU jobs now compile in a fresh
+runner temporary directory. The subsequent full CI run passed. Portable builds
+retain their cache. Current feature/portability coverage is documented in
+`docs/stability.md`, and measured ARM/WASM results live under `benchmarks/`.

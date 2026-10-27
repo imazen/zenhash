@@ -234,7 +234,7 @@ impl core::hash::Hasher for Xxh3 {
     }
 }
 
-#[cfg(feature = "std")]
+#[cfg(feature = "io")]
 impl std::io::Write for Xxh3 {
     #[inline]
     fn write(&mut self, buf: &[u8]) -> std::io::Result<usize> {

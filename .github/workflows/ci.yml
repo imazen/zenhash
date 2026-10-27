@@ -37,19 +37,21 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo test
       - run: cargo test --no-default-features
-      - run: cargo test --no-default-features --features std
-      - run: cargo test --no-default-features --features xxh3
-      - run: cargo test --no-default-features --features std,xxh3
+      - name: Run all algorithms with a genuinely no_std dependency graph
+        run: cargo test --manifest-path tools/stability/Cargo.toml --no-default-features --features xxh3,xxh32,xxh64,rapidhash,fnv
       # --all-features includes `avx512` and `_dev`, so the tier-permutation
       # test also disables tiers the target guarantees at compile time.
-      - run: cargo test --all-features
+      - name: Test all algorithms against C outputs and SIMD tiers
+        run: cargo test --all-features
       # Code under cfg!(target_feature = ...) and incant!'s compile-time
       # dispatch only compile when the target features are on for all code.
-      - name: Test with -C target-cpu=native
+      # CPU-specific artifacts cannot be reused across heterogeneous runners.
+      - name: Test with -C target-cpu=native using fresh artifacts
         if: matrix.os == 'ubuntu-latest' || matrix.os == 'ubuntu-24.04-arm'
         run: cargo test --all-features
         env:
           RUSTFLAGS: -D warnings -C target-cpu=native
+          CARGO_TARGET_DIR: ${{ runner.temp }}/zenhash-native
 
   i686:
     name: Test (i686-unknown-linux-gnu, cross)
@@ -63,7 +65,7 @@ jobs:
       - uses: Swatinem/rust-cache@v2
         with:
           key: cross-i686
-      - run: cross test --target i686-unknown-linux-gnu
+      - run: cross test --target i686-unknown-linux-gnu --all-features
       - run: cross test --target i686-unknown-linux-gnu --no-default-features
       - run: cross test --target i686-unknown-linux-gnu --no-default-features --features xxh3
 
@@ -81,7 +83,7 @@ jobs:
           key: cross-s390x
       # The only CI target where SIMD dispatch is skipped for byte order and
       # every little-endian read must byte-swap.
-      - run: cross test --target s390x-unknown-linux-gnu
+      - run: cross test --target s390x-unknown-linux-gnu --all-features
 
   wasm:
     name: WASM (wasm32-unknown-unknown check, wasm32-wasip1 tests)
@@ -99,10 +101,29 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo check --target wasm32-unknown-unknown --no-default-features
       - run: cargo check --target wasm32-unknown-unknown --no-default-features --features xxh3
-      - run: cargo test --target wasm32-wasip1 --lib --tests
-      - run: cargo test --target wasm32-wasip1 --lib --tests
+      - run: cargo check --target wasm32-unknown-unknown --no-default-features --features rapidhash
+      - shell: bash
+        run: |
+          cargo test --target wasm32-wasip1 --all-features --lib --tests
+          cargo test --manifest-path tools/stability/Cargo.toml --target wasm32-wasip1 --no-default-features --features xxh3,xxh32,xxh64,rapidhash,fnv
+        env:
+          RUSTFLAGS: -D warnings -Ctarget-feature=-simd128
+      - shell: bash
+        run: |
+          cargo test --target wasm32-wasip1 --all-features --lib --tests
+          cargo test --manifest-path tools/stability/Cargo.toml --target wasm32-wasip1 --no-default-features --features xxh3,xxh32,xxh64,rapidhash,fnv
         env:
           RUSTFLAGS: -D warnings -Ctarget-feature=+simd128
+      - name: Test wide arithmetic without SIMD
+        run: cargo test --manifest-path tools/stability/Cargo.toml --target wasm32-wasip1 --all-features
+        env:
+          RUSTFLAGS: -D warnings -Ctarget-feature=-simd128,+wide-arithmetic
+          CARGO_TARGET_WASM32_WASIP1_RUNNER: wasmtime -Wwide-arithmetic=y
+      - name: Test wide arithmetic with SIMD128
+        run: cargo test --manifest-path tools/stability/Cargo.toml --target wasm32-wasip1 --all-features
+        env:
+          RUSTFLAGS: -D warnings -Ctarget-feature=+simd128,+wide-arithmetic
+          CARGO_TARGET_WASM32_WASIP1_RUNNER: wasmtime -Wwide-arithmetic=y
 
   no-std:
     name: no_std (thumbv7em-none-eabihf)
@@ -115,6 +136,8 @@ jobs:
       - uses: Swatinem/rust-cache@v2
       - run: cargo check --target thumbv7em-none-eabihf --no-default-features
       - run: cargo check --target thumbv7em-none-eabihf --no-default-features --features xxh3
+      - run: cargo check --target thumbv7em-none-eabihf --no-default-features --features rapidhash
+      - run: cargo check --target thumbv7em-none-eabihf --no-default-features --features fnv
 
   msrv:
     name: MSRV (rust-version from Cargo.toml)
@@ -124,7 +147,7 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: taiki-e/install-action@cargo-hack
       - uses: Swatinem/rust-cache@v2
-      - run: cargo hack check --rust-version
+      - run: cargo hack check --rust-version --all-features
 
   features:
     name: Feature powerset
@@ -135,6 +158,44 @@ jobs:
       - uses: taiki-e/install-action@cargo-hack
       - uses: Swatinem/rust-cache@v2
       - run: cargo hack check --feature-powerset --no-dev-deps
+      - name: Test each algorithm alone (no_std library)
+        shell: bash
+        run: |
+          for algorithm in xxh3 xxh32 xxh64 rapidhash fnv; do
+            cargo test --no-default-features --features "$algorithm"
+          done
+      - run: cargo test --no-default-features --features std,rapidhash
+      - name: Verify pinned C reference fixtures
+        shell: bash
+        run: |
+          cc -O2 -Wall -Wextra tools/hash-conformance.c -o target/hash-conformance
+          target/hash-conformance > target/conformance.txt
+          diff -u tests/reference/conformance.txt target/conformance.txt
+          cc -O2 -Wall -Wextra -Werror tools/hash-conformance-extended.c -o target/conformance-extended
+          target/conformance-extended > target/conformance-extended.txt
+          diff -u tests/reference/conformance-extended.txt target/conformance-extended.txt
+          cc -O2 -Wall -Wextra -Werror tools/fnv-reference.c -o target/fnv-reference
+          target/fnv-reference > target/fnv.txt
+          diff -u tests/reference/fnv.txt target/fnv.txt
+          target/fnv-reference bases > target/fnv-bases.txt
+          diff -u tests/reference/fnv-bases.txt target/fnv-bases.txt
+
+  stability-configs:
+    name: Runtime feature powerset (${{ matrix.shard }}/16)
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16]
+    steps:
+      - uses: actions/checkout@v7
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: taiki-e/install-action@cargo-hack
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: tools/stability
+          key: stability-${{ matrix.shard }}
+      - run: cargo hack test --manifest-path tools/stability/Cargo.toml --feature-powerset --partition ${{ matrix.shard }}/16
 
   lint:
     name: fmt, clippy, docs
@@ -188,8 +249,8 @@ jobs:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
-      - run: cargo bench --no-run
-      - run: cargo bench --no-run --no-default-features --features std,xxh3
+      - run: cargo bench --no-run --all-features
+      - run: cargo bench --no-run --no-default-features --features std,xxh3,xxh32,xxh64,rapidhash
 
   fuzz-build:
     name: Fuzz targets compile

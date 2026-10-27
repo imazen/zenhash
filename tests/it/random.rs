@@ -59,21 +59,28 @@ fn random_one_shot_and_streaming_match_oracles() {
                 "{ctx}"
             );
         }
-        assert_eq!(
-            zenhash::xxh64(&data, seed),
-            xxhash_rust::xxh64::xxh64(&data, seed),
-            "{ctx}"
-        );
-        assert_eq!(
-            zenhash::xxh32(&data, seed as u32),
-            xxhash_rust::xxh32::xxh32(&data, seed as u32),
-            "{ctx}"
-        );
-
+        #[cfg(feature = "xxh64")]
+        {
+            assert_eq!(
+                zenhash::xxh64(&data, seed),
+                xxhash_rust::xxh64::xxh64(&data, seed),
+                "{ctx}"
+            );
+        }
+        #[cfg(feature = "xxh32")]
+        {
+            assert_eq!(
+                zenhash::xxh32(&data, seed as u32),
+                xxhash_rust::xxh32::xxh32(&data, seed as u32),
+                "{ctx}"
+            );
+        }
         // Streaming with random split points, including empty updates.
         #[cfg(feature = "xxh3")]
         let mut h3 = zenhash::Xxh3::with_seed(seed);
+        #[cfg(feature = "xxh64")]
         let mut h64 = zenhash::Xxh64::with_seed(seed);
+        #[cfg(feature = "xxh32")]
         let mut h32 = zenhash::Xxh32::with_seed(seed as u32);
         let mut rest = &data[..];
         while !rest.is_empty() {
@@ -82,14 +89,19 @@ fn random_one_shot_and_streaming_match_oracles() {
             let (a, b) = rest.split_at(n);
             #[cfg(feature = "xxh3")]
             h3.update(a);
+            #[cfg(feature = "xxh64")]
             h64.update(a);
+            #[cfg(feature = "xxh32")]
             h32.update(a);
             rest = b;
             if rng.below(8) == 0 {
                 // Digests mid-stream must not disturb the state.
                 #[cfg(feature = "xxh3")]
                 let _ = (h3.digest(), h3.digest128());
-                let _ = (h64.digest(), h32.digest());
+                #[cfg(feature = "xxh64")]
+                let _ = h64.digest();
+                #[cfg(feature = "xxh32")]
+                let _ = h32.digest();
             }
         }
         #[cfg(feature = "xxh3")]
@@ -105,16 +117,22 @@ fn random_one_shot_and_streaming_match_oracles() {
                 "{ctx} streaming"
             );
         }
-        assert_eq!(
-            h64.digest(),
-            xxhash_rust::xxh64::xxh64(&data, seed),
-            "{ctx} streaming"
-        );
-        assert_eq!(
-            h32.digest(),
-            xxhash_rust::xxh32::xxh32(&data, seed as u32),
-            "{ctx} streaming"
-        );
+        #[cfg(feature = "xxh64")]
+        {
+            assert_eq!(
+                h64.digest(),
+                xxhash_rust::xxh64::xxh64(&data, seed),
+                "{ctx} streaming"
+            );
+        }
+        #[cfg(feature = "xxh32")]
+        {
+            assert_eq!(
+                h32.digest(),
+                xxhash_rust::xxh32::xxh32(&data, seed as u32),
+                "{ctx} streaming"
+            );
+        }
     }
     eprintln!("random_one_shot_and_streaming: {total} bytes");
     assert!(total > 3_000_000, "only {total} bytes hashed");

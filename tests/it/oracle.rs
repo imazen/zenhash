@@ -1,9 +1,12 @@
 //! Parity with two independent implementations: xxhash-rust and twox-hash.
 
 use crate::{interesting_lengths, test_bytes};
+#[cfg(feature = "xxh32")]
+use twox_hash::XxHash32;
+#[cfg(feature = "xxh64")]
+use twox_hash::XxHash64;
 #[cfg(feature = "xxh3")]
 use twox_hash::{XxHash3_64, XxHash3_128};
-use twox_hash::{XxHash32, XxHash64};
 
 const SEEDS: [u64; 4] = [0, 1, 0x9E37_79B1_85EB_CA87, u64::MAX];
 
@@ -101,18 +104,25 @@ fn short_secret_is_rejected() {
     assert!(zenhash::Xxh3::with_secret(&secret).is_err());
 }
 
+#[cfg(any(feature = "xxh64", feature = "xxh32"))]
 #[test]
 fn xxh64_and_xxh32_match_oracles() {
     for len in interesting_lengths() {
         let data = test_bytes(len, len as u64 * 3);
         for seed in SEEDS {
-            let ours = zenhash::xxh64(&data, seed);
-            assert_eq!(ours, xxhash_rust::xxh64::xxh64(&data, seed), "len {len}");
-            assert_eq!(ours, XxHash64::oneshot(seed, &data), "len {len}");
-            let seed32 = seed as u32;
-            let ours = zenhash::xxh32(&data, seed32);
-            assert_eq!(ours, xxhash_rust::xxh32::xxh32(&data, seed32), "len {len}");
-            assert_eq!(ours, XxHash32::oneshot(seed32, &data), "len {len}");
+            #[cfg(feature = "xxh64")]
+            {
+                let ours = zenhash::xxh64(&data, seed);
+                assert_eq!(ours, xxhash_rust::xxh64::xxh64(&data, seed), "len {len}");
+                assert_eq!(ours, XxHash64::oneshot(seed, &data), "len {len}");
+            }
+            #[cfg(feature = "xxh32")]
+            {
+                let seed32 = seed as u32;
+                let ours = zenhash::xxh32(&data, seed32);
+                assert_eq!(ours, xxhash_rust::xxh32::xxh32(&data, seed32), "len {len}");
+                assert_eq!(ours, XxHash32::oneshot(seed32, &data), "len {len}");
+            }
         }
     }
 }
@@ -168,7 +178,9 @@ fn streaming_matches_one_shot() {
                 want_secret128,
             )
         };
+        #[cfg(feature = "xxh64")]
         let want_xxh64 = zenhash::xxh64(&data, 42);
+        #[cfg(feature = "xxh32")]
         let want_xxh32 = zenhash::xxh32(&data, 42);
         for split in SPLITS {
             #[cfg(feature = "xxh3")]
@@ -177,7 +189,9 @@ fn streaming_matches_one_shot() {
             let mut b = zenhash::Xxh3::with_seed(42);
             #[cfg(feature = "xxh3")]
             let mut c = zenhash::Xxh3::with_secret(&secret).unwrap();
+            #[cfg(feature = "xxh64")]
             let mut d = zenhash::Xxh64::with_seed(42);
+            #[cfg(feature = "xxh32")]
             let mut e = zenhash::Xxh32::with_seed(42);
             chunked(&data, split, |chunk| {
                 #[cfg(feature = "xxh3")]
@@ -186,7 +200,9 @@ fn streaming_matches_one_shot() {
                 b.update(chunk);
                 #[cfg(feature = "xxh3")]
                 c.update(chunk);
+                #[cfg(feature = "xxh64")]
                 d.update(chunk);
+                #[cfg(feature = "xxh32")]
                 e.update(chunk);
             });
             let ctx = format!("len {len} split {split:?}");
@@ -199,12 +215,15 @@ fn streaming_matches_one_shot() {
                 assert_eq!(c.digest(), want_secret, "{ctx}");
                 assert_eq!(c.digest128(), want_secret128, "{ctx}");
             }
+            #[cfg(feature = "xxh64")]
             assert_eq!(d.digest(), want_xxh64, "{ctx}");
+            #[cfg(feature = "xxh32")]
             assert_eq!(e.digest(), want_xxh32, "{ctx}");
         }
     }
 }
 
+#[cfg(any(feature = "xxh3", feature = "xxh64"))]
 #[test]
 fn digest_does_not_consume_and_reset_restarts() {
     let data = test_bytes(5000, 1);
@@ -220,11 +239,14 @@ fn digest_does_not_consume_and_reset_restarts() {
         h.update(&data[..100]);
         assert_eq!(h.digest(), zenhash::xxh3_64_with_seed(&data[..100], 3));
     }
-    let mut h = zenhash::Xxh64::with_seed(3);
-    h.update(&data);
-    h.reset();
-    h.update(&data[..40]);
-    assert_eq!(h.digest(), zenhash::xxh64(&data[..40], 3));
+    #[cfg(feature = "xxh64")]
+    {
+        let mut h = zenhash::Xxh64::with_seed(3);
+        h.update(&data);
+        h.reset();
+        h.update(&data[..40]);
+        assert_eq!(h.digest(), zenhash::xxh64(&data[..40], 3));
+    }
 }
 
 #[cfg(feature = "xxh3")]

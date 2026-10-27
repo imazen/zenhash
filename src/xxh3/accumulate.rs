@@ -5,9 +5,9 @@
 //! per `update` (at most every 256 bytes of buffered input, or once per large
 //! slice) when streaming.
 //!
-//! magetypes 0.9.29 has no 32x32->64 widening multiply or 64-bit lane swap on
+//! magetypes 0.9.31-beta.2 has no 32x32->64 widening multiply or 64-bit lane swap on
 //! its `u64` vectors, which XXH3 needs in every stripe, so each tier is written
-//! with the intrinsics of its instruction set through `#[arcane]`/`#[rite]`.
+//! with the intrinsics of its instruction set through `#[attune]`.
 //! The tiers share one loop, [`consume_body!`], and differ only in four
 //! helpers: load, store, accumulate one stripe, scramble.
 
@@ -46,7 +46,15 @@ pub(super) fn consume(
     }
     incant!(
         consume(acc, fresh, stripes, so_far, secret, last),
-        [v4(cfg(avx512)), v3, v1, neon, wasm128, scalar]
+        [
+            v4x(cfg(avx512)),
+            v4(cfg(avx512)),
+            v3,
+            v1,
+            neon,
+            wasm128,
+            scalar
+        ]
     )
 }
 
@@ -236,7 +244,7 @@ mod x86 {
 
     // --- SSE2 (v1): four 128-bit registers -------------------------------
 
-    #[rite(v1, import_intrinsics)]
+    #[attune(v1, import_intrinsics)]
     fn load_v1(acc: &[u64; 8]) -> [__m128i; 4] {
         let (a, _) = acc.as_chunks::<2>();
         [
@@ -247,7 +255,7 @@ mod x86 {
         ]
     }
 
-    #[rite(v1, import_intrinsics)]
+    #[attune(v1, import_intrinsics)]
     fn store_v1(state: [__m128i; 4], acc: &mut [u64; 8]) {
         let (a, _) = acc.as_chunks_mut::<2>();
         for (dst, v) in a.iter_mut().zip(state) {
@@ -255,7 +263,7 @@ mod x86 {
         }
     }
 
-    #[rite(v1, import_intrinsics)]
+    #[attune(v1, import_intrinsics)]
     fn accumulate_v1(mut acc: [__m128i; 4], stripe: &[u8; 64], key: &[u8; 64]) -> [__m128i; 4] {
         let (data, _) = stripe.as_chunks::<16>();
         let (keys, _) = key.as_chunks::<16>();
@@ -270,7 +278,7 @@ mod x86 {
         acc
     }
 
-    #[rite(v1, import_intrinsics)]
+    #[attune(v1, import_intrinsics)]
     fn scramble_v1(mut acc: [__m128i; 4], key: &[u8; 64]) -> [__m128i; 4] {
         let (keys, _) = key.as_chunks::<16>();
         let prime = _mm_set1_epi32(PRIME32_1 as i32);
@@ -301,7 +309,7 @@ mod x86 {
         consume_v1_kernel(token, acc, fresh, stripes, so_far, secret, last);
     }
 
-    #[arcane(import_intrinsics)]
+    #[attune(wrap, import_intrinsics)]
     fn consume_v1_kernel(
         _token: X64V1Token,
         acc: &mut [u64; 8],
@@ -327,13 +335,13 @@ mod x86 {
 
     // --- AVX2 (v3): two 256-bit registers --------------------------------
 
-    #[rite(v3, import_intrinsics)]
+    #[attune(v3, import_intrinsics)]
     fn load_v3(acc: &[u64; 8]) -> [__m256i; 2] {
         let (a, _) = acc.as_chunks::<4>();
         [_mm256_loadu_si256(&a[0]), _mm256_loadu_si256(&a[1])]
     }
 
-    #[rite(v3, import_intrinsics)]
+    #[attune(v3, import_intrinsics)]
     fn store_v3(state: [__m256i; 2], acc: &mut [u64; 8]) {
         let (a, _) = acc.as_chunks_mut::<4>();
         for (dst, v) in a.iter_mut().zip(state) {
@@ -341,7 +349,7 @@ mod x86 {
         }
     }
 
-    #[rite(v3, import_intrinsics)]
+    #[attune(v3, import_intrinsics)]
     fn accumulate_v3(mut acc: [__m256i; 2], stripe: &[u8; 64], key: &[u8; 64]) -> [__m256i; 2] {
         let (data, _) = stripe.as_chunks::<32>();
         let (keys, _) = key.as_chunks::<32>();
@@ -356,7 +364,7 @@ mod x86 {
         acc
     }
 
-    #[rite(v3, import_intrinsics)]
+    #[attune(v3, import_intrinsics)]
     fn scramble_v3(mut acc: [__m256i; 2], key: &[u8; 64]) -> [__m256i; 2] {
         let (keys, _) = key.as_chunks::<32>();
         let prime = _mm256_set1_epi32(PRIME32_1 as i32);
@@ -371,7 +379,7 @@ mod x86 {
         acc
     }
 
-    #[arcane(import_intrinsics)]
+    #[attune(wrap, import_intrinsics)]
     pub(super) fn consume_v3(
         _token: X64V3Token,
         acc: &mut [u64; 8],
@@ -398,19 +406,19 @@ mod x86 {
     // --- AVX-512 (v4): one 512-bit register ------------------------------
 
     #[cfg(feature = "avx512")]
-    #[rite(v4, import_intrinsics)]
+    #[attune(v4, import_intrinsics)]
     fn load_v4(acc: &[u64; 8]) -> __m512i {
         _mm512_loadu_si512(acc)
     }
 
     #[cfg(feature = "avx512")]
-    #[rite(v4, import_intrinsics)]
+    #[attune(v4, import_intrinsics)]
     fn store_v4(state: __m512i, acc: &mut [u64; 8]) {
         _mm512_storeu_si512(acc, state);
     }
 
     #[cfg(feature = "avx512")]
-    #[rite(v4, import_intrinsics)]
+    #[attune(v4, import_intrinsics)]
     fn accumulate_v4(acc: __m512i, stripe: &[u8; 64], key: &[u8; 64]) -> __m512i {
         let data_vec = _mm512_loadu_si512(stripe);
         let data_key = _mm512_xor_si512(data_vec, _mm512_loadu_si512(key));
@@ -421,7 +429,7 @@ mod x86 {
     }
 
     #[cfg(feature = "avx512")]
-    #[rite(v4, import_intrinsics)]
+    #[attune(v4, import_intrinsics)]
     fn scramble_v4(acc: __m512i, key: &[u8; 64]) -> __m512i {
         let prime = _mm512_set1_epi32(PRIME32_1 as i32);
         // 0x96 = a ^ b ^ c: one instruction for acc ^ (acc >> 47) ^ key.
@@ -437,9 +445,35 @@ mod x86 {
     }
 
     #[cfg(feature = "avx512")]
-    #[arcane(import_intrinsics)]
+    #[attune(wrap, import_intrinsics)]
     pub(super) fn consume_v4(
         _token: X64V4Token,
+        acc: &mut [u64; 8],
+        fresh: bool,
+        stripes: &[[u8; STRIPE_LEN]],
+        so_far: &mut usize,
+        secret: &[u8],
+        last: Option<&[u8; STRIPE_LEN]>,
+    ) {
+        consume_body!(
+            acc,
+            fresh,
+            stripes,
+            so_far,
+            secret,
+            last,
+            load_v4,
+            store_v4,
+            accumulate_v4,
+            scramble_v4
+        )
+    }
+
+    // Prefer the modern AVX-512 context; retain v4 for earlier AVX-512 CPUs.
+    #[cfg(feature = "avx512")]
+    #[attune(wrap, import_intrinsics)]
+    pub(super) fn consume_v4x(
+        _token: X64V4xToken,
         acc: &mut [u64; 8],
         fresh: bool,
         stripes: &[[u8; STRIPE_LEN]],
@@ -478,7 +512,7 @@ mod arm {
     };
     use crate::common::PRIME32_1;
 
-    #[rite(neon, import_intrinsics)]
+    #[attune(neon, import_intrinsics)]
     fn load_neon(acc: &[u64; 8]) -> [uint64x2_t; 4] {
         let (a, _) = acc.as_chunks::<2>();
         [
@@ -489,7 +523,7 @@ mod arm {
         ]
     }
 
-    #[rite(neon, import_intrinsics)]
+    #[attune(neon, import_intrinsics)]
     fn store_neon(state: [uint64x2_t; 4], acc: &mut [u64; 8]) {
         let (a, _) = acc.as_chunks_mut::<2>();
         for (dst, v) in a.iter_mut().zip(state) {
@@ -497,7 +531,7 @@ mod arm {
         }
     }
 
-    #[rite(neon, import_intrinsics)]
+    #[attune(neon, import_intrinsics)]
     fn accumulate_neon(
         mut acc: [uint64x2_t; 4],
         stripe: &[u8; 64],
@@ -505,19 +539,24 @@ mod arm {
     ) -> [uint64x2_t; 4] {
         let (data, _) = stripe.as_chunks::<16>();
         let (keys, _) = key.as_chunks::<16>();
-        for i in 0..4 {
-            let data_vec = vreinterpretq_u64_u8(vld1q_u8(&data[i]));
-            let key_vec = vreinterpretq_u64_u8(vld1q_u8(&keys[i]));
-            let data_key = veorq_u64(data_vec, key_vec);
-            let data_swap = vextq_u64::<1>(data_vec, data_vec);
-            let lo = vmovn_u64(data_key);
-            let hi = vshrn_n_u64::<32>(data_key);
-            acc[i] = vmlal_u32(vaddq_u64(acc[i], data_swap), lo, hi);
+        // Pack four low/high 32-bit factors with two unzip operations.
+        // Both widening products then use the same pair of packed vectors.
+        for i in [0, 2] {
+            let a = vreinterpretq_u64_u8(vld1q_u8(&data[i]));
+            let b = vreinterpretq_u64_u8(vld1q_u8(&data[i + 1]));
+            let x = veorq_u64(a, vreinterpretq_u64_u8(vld1q_u8(&keys[i])));
+            let y = veorq_u64(b, vreinterpretq_u64_u8(vld1q_u8(&keys[i + 1])));
+            let lo = vuzp1q_u32(vreinterpretq_u32_u64(x), vreinterpretq_u32_u64(y));
+            let hi = vuzp2q_u32(vreinterpretq_u32_u64(x), vreinterpretq_u32_u64(y));
+            let sum_a = vmlal_u32(vextq_u64::<1>(a, a), vget_low_u32(lo), vget_low_u32(hi));
+            let sum_b = vmlal_high_u32(vextq_u64::<1>(b, b), lo, hi);
+            acc[i] = vaddq_u64(acc[i], sum_a);
+            acc[i + 1] = vaddq_u64(acc[i + 1], sum_b);
         }
         acc
     }
 
-    #[rite(neon, import_intrinsics)]
+    #[attune(neon, import_intrinsics)]
     fn scramble_neon(mut acc: [uint64x2_t; 4], key: &[u8; 64]) -> [uint64x2_t; 4] {
         let (keys, _) = key.as_chunks::<16>();
         let prime = vdup_n_u32(PRIME32_1);
@@ -532,7 +571,7 @@ mod arm {
         acc
     }
 
-    #[arcane(import_intrinsics)]
+    #[attune(wrap, import_intrinsics)]
     pub(super) fn consume_neon(
         _token: NeonToken,
         acc: &mut [u64; 8],
@@ -573,7 +612,7 @@ mod wasm {
     };
     use crate::common::PRIME32_1;
 
-    #[rite(wasm128, import_intrinsics)]
+    #[attune(wasm128, import_intrinsics)]
     fn load_wasm128(acc: &[u64; 8]) -> [v128; 4] {
         let (a, _) = acc.as_chunks::<2>();
         [
@@ -584,7 +623,7 @@ mod wasm {
         ]
     }
 
-    #[rite(wasm128, import_intrinsics)]
+    #[attune(wasm128, import_intrinsics)]
     fn store_wasm128(state: [v128; 4], acc: &mut [u64; 8]) {
         let (a, _) = acc.as_chunks_mut::<2>();
         for (dst, v) in a.iter_mut().zip(state) {
@@ -592,25 +631,32 @@ mod wasm {
         }
     }
 
-    #[rite(wasm128, import_intrinsics)]
+    #[attune(wasm128, import_intrinsics)]
     fn accumulate_wasm128(mut acc: [v128; 4], stripe: &[u8; 64], key: &[u8; 64]) -> [v128; 4] {
         let (data, _) = stripe.as_chunks::<16>();
         let (keys, _) = key.as_chunks::<16>();
-        for i in 0..4 {
-            let data_vec = v128_load(&data[i]);
-            let data_key = v128_xor(data_vec, v128_load(&keys[i]));
-            // Low and high 32-bit halves of each 64-bit lane, packed into the
-            // low two 32-bit lanes for the widening multiply.
-            let lo = i32x4_shuffle::<0, 2, 0, 2>(data_key, data_key);
-            let hi = i32x4_shuffle::<1, 3, 1, 3>(data_key, data_key);
-            let product = u64x2_extmul_low_u32x4(lo, hi);
-            let data_swap = i64x2_shuffle::<1, 0>(data_vec, data_vec);
-            acc[i] = i64x2_add(product, i64x2_add(acc[i], data_swap));
+        // Pair adjacent vectors so LLVM keeps the 32-bit lanes packed.
+        // Separately shuffling one vector's halves folds into i64x2.mul,
+        // whose lowering costs extra work on current ARM WASM engines.
+        for i in [0, 2] {
+            let a = v128_load(&data[i]);
+            let b = v128_load(&data[i + 1]);
+            let x = v128_xor(a, v128_load(&keys[i]));
+            let y = v128_xor(b, v128_load(&keys[i + 1]));
+            let lo = i32x4_shuffle::<0, 2, 4, 6>(x, y);
+            let hi = i32x4_shuffle::<1, 3, 5, 7>(x, y);
+            let product_a = u64x2_extmul_low_u32x4(lo, hi);
+            let product_b = u64x2_extmul_high_u32x4(lo, hi);
+            acc[i] = i64x2_add(product_a, i64x2_add(acc[i], i64x2_shuffle::<1, 0>(a, a)));
+            acc[i + 1] = i64x2_add(
+                product_b,
+                i64x2_add(acc[i + 1], i64x2_shuffle::<1, 0>(b, b)),
+            );
         }
         acc
     }
 
-    #[rite(wasm128, import_intrinsics)]
+    #[attune(wasm128, import_intrinsics)]
     fn scramble_wasm128(mut acc: [v128; 4], key: &[u8; 64]) -> [v128; 4] {
         let (keys, _) = key.as_chunks::<16>();
         let prime = u64x2_splat(u64::from(PRIME32_1));
@@ -622,7 +668,7 @@ mod wasm {
         acc
     }
 
-    #[arcane(import_intrinsics)]
+    #[attune(wrap, import_intrinsics)]
     pub(super) fn consume_wasm128(
         _token: Wasm128Token,
         acc: &mut [u64; 8],

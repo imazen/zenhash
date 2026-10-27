@@ -1,14 +1,16 @@
 # zenhash [![CI](https://img.shields.io/github/actions/workflow/status/imazen/zenhash/ci.yml?style=flat-square&label=CI)](https://github.com/imazen/zenhash/actions/workflows/ci.yml) [![crates.io](https://img.shields.io/crates/v/zenhash?style=flat-square)](https://crates.io/crates/zenhash) [![lib.rs](https://img.shields.io/crates/v/zenhash?style=flat-square&label=lib.rs&color=blue)](https://lib.rs/crates/zenhash) [![docs.rs](https://img.shields.io/docsrs/zenhash?style=flat-square)](https://docs.rs/zenhash) [![license](https://img.shields.io/crates/l/zenhash?style=flat-square)](#license) [![MSRV](https://img.shields.io/badge/MSRV-1.89-blue?style=flat-square)](https://github.com/imazen/zenhash/blob/main/Cargo.toml)
 
 zenhash provides hash algorithms in safe Rust. It currently implements the xxHash
-family (XXH3 64/128, XXH64, XXH32), with runtime SIMD dispatch for XXH3.
-Algorithms can be added independently; XXH3 is behind the default-enabled `xxh3`
-feature.
+family, standard rapidhash v3 and FNV-1a compatibility formulas, with runtime
+SIMD dispatch for XXH3.
+Algorithms have independent features: `xxh3` is enabled by default; `rapidhash`
+and `fnv` are opt-in. Classic `xxh32` and `xxh64` are opt-in compatibility features.
 
 Our goal is `#![forbid(unsafe_code)]` with competitive performance across x86,
 ARM and WebAssembly, including WASM SIMD128. Cross-ISA performance parity is a
-goal, not a measured guarantee; the published benchmark results below cover one
-x86 CPU. Hash outputs must match the reference bit for bit on every ISA.
+goal. Measured performance varies with input size, target and runtime features;
+[ARM/WASM results](https://github.com/imazen/zenhash/blob/main/benchmarks/arm_wasm_2026-10-26.md)
+include the remaining gaps. Hash outputs must match the reference bit for bit on every ISA.
 
 `no_std` + `alloc` · `#![forbid(unsafe_code)]` · MSRV 1.89 · x86-64 (AVX-512, AVX2, SSE2) / aarch64 (NEON) / wasm32 (SIMD128) · MIT OR Apache-2.0
 
@@ -35,6 +37,102 @@ assert_eq!(h.digest(), h64);
 assert_eq!(h.digest128(), h128);
 # }
 ```
+
+## Quick reference
+
+| Algorithm | One-shot | Streaming |
+|---|---|---|
+| XXH3, 64-bit | [`xxh3_64`](https://docs.rs/zenhash/latest/zenhash/fn.xxh3_64.html), [`xxh3_64_with_seed`](https://docs.rs/zenhash/latest/zenhash/fn.xxh3_64_with_seed.html), [`xxh3_64_with_secret`](https://docs.rs/zenhash/latest/zenhash/fn.xxh3_64_with_secret.html) | [`Xxh3::digest`](https://docs.rs/zenhash/latest/zenhash/struct.Xxh3.html#method.digest) |
+| XXH3, 128-bit | [`xxh3_128`](https://docs.rs/zenhash/latest/zenhash/fn.xxh3_128.html), [`xxh3_128_with_seed`](https://docs.rs/zenhash/latest/zenhash/fn.xxh3_128_with_seed.html), [`xxh3_128_with_secret`](https://docs.rs/zenhash/latest/zenhash/fn.xxh3_128_with_secret.html) | [`Xxh3::digest128`](https://docs.rs/zenhash/latest/zenhash/struct.Xxh3.html#method.digest128) |
+| XXH64 ([`xxh64`](https://docs.rs/zenhash/latest/zenhash/fn.xxh64.html) feature) | `xxh64(data, seed)` | [`Xxh64::digest`](https://docs.rs/zenhash/latest/zenhash/struct.Xxh64.html#method.digest) |
+| XXH32 ([`xxh32`](https://docs.rs/zenhash/latest/zenhash/fn.xxh32.html) feature) | `xxh32(data, seed)` | [`Xxh32::digest`](https://docs.rs/zenhash/latest/zenhash/struct.Xxh32.html#method.digest) |
+| FNV-1a (`fnv` feature) | [`fnv1a32`](https://docs.rs/zenhash/latest/zenhash/fn.fnv1a32.html), [`fnv1a64`](https://docs.rs/zenhash/latest/zenhash/fn.fnv1a64.html), [`fnv1a128`](https://docs.rs/zenhash/latest/zenhash/fn.fnv1a128.html), [`fnv1a64_fold32`](https://docs.rs/zenhash/latest/zenhash/fn.fnv1a64_fold32.html), [`fnv1a64_fmix`](https://docs.rs/zenhash/latest/zenhash/fn.fnv1a64_fmix.html) | `Fnv1a32` / `Fnv1a64` / `Fnv1a128` digests |
+| rapidhash v3 (`rapidhash` feature) | [`rapidhash_v3`](https://docs.rs/zenhash/latest/zenhash/fn.rapidhash_v3.html), [`rapidhash_v3_with_seed`](https://docs.rs/zenhash/latest/zenhash/fn.rapidhash_v3_with_seed.html), [`rapidhash_v3_with_seed_and_secret`](https://docs.rs/zenhash/latest/zenhash/fn.rapidhash_v3_with_seed_and_secret.html) | [`RapidhashV3::digest`](https://docs.rs/zenhash/latest/zenhash/struct.RapidhashV3.html#method.digest) |
+
+`Xxh3::new`, `Xxh3::with_seed` and `Xxh3::with_secret` pick the variant;
+one streaming state produces both widths. `Xxh64` and `Xxh32` have `new` and
+`with_seed`. All streaming hashers implement `core::hash::Hasher`, and implement
+`std::io::Write` with the opt-in `io` feature, so `std::io::copy(&mut reader, &mut hasher)` works.
+The xxHash and rapidhash `Debug` output shows only the byte count, never seeds, secrets or
+buffered input.
+
+A custom secret must be at least `XXH3_SECRET_SIZE_MIN` (136) bytes; shorter
+ones return `Err(At<Error::SecretTooShort>)` (errors carry a
+[whereat](https://crates.io/crates/whereat) location trace).
+
+`Hasher::write_u32` and the other integer methods feed native-endian bytes,
+and `Hash` impls for slices add a platform-width length prefix. For hashes
+that must match across platforms, feed bytes with `update` or `write`.
+
+The full public API, one item per line, is in
+[docs/public-api/zenhash.txt](https://github.com/imazen/zenhash/blob/main/docs/public-api/zenhash.txt),
+regenerated by `just api-doc` and checked in CI.
+
+### Common tasks
+
+| Task | Call or setting |
+|---|---|
+| Feed bytes without I/O | `hasher.update(bytes)`; available without `std` or `io`. |
+| Snapshot a digest, then keep updating | `hasher.digest()`; XXH3 also has `digest128()`. |
+| Reuse the same seed or secret for a new message | `hasher.reset()`. |
+| Seed a hash | `Xxh3::with_seed(seed)`, `RapidhashV3::with_seed(seed)`; matching one-shot functions are listed above. |
+| Continue an existing FNV fingerprint | `Fnv1a64::with_basis(previous_digest)`. |
+| Hash a reader | Enable `io`, then `std::io::copy(&mut reader, &mut hasher)`. |
+| Save a portable hash | Feed explicitly encoded bytes and save the digest with `to_le_bytes()` or `to_be_bytes()`. |
+
+For a reader adapter, keep the default algorithms and add `io`:
+
+```toml
+zenhash = { version = "0.1.0", features = ["io"] }
+```
+
+```rust
+# #[cfg(all(feature = "xxh3", feature = "io"))]
+# {
+let mut reader = &b"hello world"[..];
+let mut hasher = zenhash::Xxh3::new();
+std::io::copy(&mut reader, &mut hasher)?;
+assert_eq!(hasher.digest(), zenhash::xxh3_64(b"hello world"));
+# }
+# Ok::<(), std::io::Error>(())
+```
+
+For allocation-free `no_std` hashing without XXH3 dependencies:
+
+```toml
+zenhash = { version = "0.1.0", default-features = false, features = ["rapidhash"] }
+```
+
+## Rapidhash v3
+
+```toml
+zenhash = { version = "0.1.0", default-features = false, features = ["std", "rapidhash"] }
+```
+
+```rust
+# #[cfg(feature = "rapidhash")]
+# {
+let bytes = b"hello world";
+let hash = zenhash::rapidhash_v3(bytes);
+let mut h = zenhash::RapidhashV3::new();
+h.update(b"hello ");
+h.update(b"world");
+assert_eq!(h.digest(), hash);
+# }
+```
+
+This ports standard v3 with the C reference's output, seed convention and eight
+secret words. `rapidhash_v3_with_seed` selects a seed;
+`rapidhash_v3_with_seed_and_secret` and `RapidhashV3::with_seed_and_secret`
+accept custom secrets. Streaming uses bounded state without allocating.
+Micro, Nano, protected mode, randomized secret generation and `const fn` hashing
+are not implemented.
+
+The [published SMHasher3 v3 run](https://gitlab.com/fwojcik/smhasher3/-/raw/main/results/raw/rapidhash.txt)
+passes 250/250 tests. That is statistical evidence for that algorithm/run, not a
+cryptographic guarantee or a measurement of this port. Fixed default secrets
+remain unsuitable for attacker-controlled hash-table keys, even with a randomized
+seed. See [algorithm selection and limitations](https://github.com/imazen/zenhash/blob/main/docs/xxh3-quality.md).
 
 ## When to use XXH3
 
@@ -69,42 +167,14 @@ Not supported:
 - `const fn` hashing.
 - SIMD for XXH64 and XXH32 (the C reference has none either), and SVE.
 
-## API
-
-| Algorithm | One-shot | Streaming |
-|---|---|---|
-| XXH3, 64-bit | `xxh3_64`, `xxh3_64_with_seed`, `xxh3_64_with_secret` | `Xxh3::digest` |
-| XXH3, 128-bit | `xxh3_128`, `xxh3_128_with_seed`, `xxh3_128_with_secret` | `Xxh3::digest128` |
-| XXH64 | `xxh64(data, seed)` | `Xxh64::digest` |
-| XXH32 | `xxh32(data, seed)` | `Xxh32::digest` |
-
-`Xxh3::new`, `Xxh3::with_seed` and `Xxh3::with_secret` pick the variant;
-one streaming state produces both widths. `Xxh64` and `Xxh32` have `new` and
-`with_seed`. All three implement `core::hash::Hasher`, and `std::io::Write`
-with the `std` feature, so `std::io::copy(&mut reader, &mut hasher)` works.
-Their `Debug` output shows only the byte count, never seeds, secrets or
-buffered input.
-
-A custom secret must be at least `XXH3_SECRET_SIZE_MIN` (136) bytes; shorter
-ones return `Err(At<Error::SecretTooShort>)` (errors carry a
-[whereat](https://crates.io/crates/whereat) location trace).
-
-`Hasher::write_u32` and the other integer methods feed native-endian bytes,
-and `Hash` impls for slices add a platform-width length prefix. For hashes
-that must match across platforms, feed bytes with `update` or `write`.
-
-The full public API, one item per line, is in
-[docs/public-api/zenhash.txt](https://github.com/imazen/zenhash/blob/main/docs/public-api/zenhash.txt),
-regenerated by `just api-doc` and checked in CI.
-
-### SIMD
+## SIMD
 
 Only XXH3 inputs over 240 bytes use SIMD. The accumulator dispatches once per
 call (per `update` call when streaming) to the best tier the CPU has:
 
 | Tier | Target | Enabled by |
 |---|---|---|
-| AVX-512 | x86-64 | default (`avx512` cargo feature) |
+| v4x, then v4 (AVX-512) | x86-64 | default (`avx512` cargo feature); archmage selects the supported token |
 | AVX2 | x86-64 | default |
 | SSE2 | x86-64 | default (baseline) |
 | NEON | aarch64 | default |
@@ -116,18 +186,23 @@ dispatch sees only the features enabled at compile time. Dispatch uses
 [archmage](https://crates.io/crates/archmage), so the crate contains no
 `unsafe`.
 
-### Features
+## Features
 
 | Feature | Default | Effect |
 |---|---|---|
 | `xxh3` | yes | XXH3 64/128 functions, `Xxh3`, custom-secret `Error` and `XXH3_SECRET_SIZE_MIN`; enables the optional archmage and whereat dependencies. |
-| `std` | yes | Runtime CPU detection for XXH3; `std::io::Write` for all enabled hashers. |
+| `rapidhash` | no | Standard rapidhash v3, seeded/custom-secret functions and `RapidhashV3`; no runtime dependencies or allocation. |
+| `xxh32` | no | Classic XXH32 compatibility functions and `Xxh32`. |
+| `xxh64` | no | Classic XXH64 compatibility functions and `Xxh64`. |
+| `fnv` | no | FNV-1a32/64/128, continuation with an offset basis, XOR-folded 64→32 and FNV64 + fmix64. |
+| `std` | yes | Runtime CPU detection for XXH3 and standard-library error integration. |
+| `io` | no | `std::io::Write` for every enabled streaming hasher; enables `std`. |
 | `avx512` | yes | Compiles the AVX-512 tier when `xxh3` is enabled; does not enable XXH3 by itself. On the benchmark CPU, XXH3-64 at 64 KiB ran at 42.3 GiB/s with it and 32.3 GiB/s without (separate runs). Measure on your hardware: AVX-512 behaves differently across CPU generations. |
 
-XXH32 and XXH64 are always available. To use them without XXH3 or its dependencies:
+To enable classic algorithms without XXH3 or its dependencies:
 
 ```toml
-zenhash = { version = "0.1.0", default-features = false }
+zenhash = { version = "0.1.0", default-features = false, features = ["xxh32", "xxh64"] }
 ```
 
 For XXH3 with `std` and runtime dispatch but without AVX-512:
@@ -139,21 +214,70 @@ zenhash = { version = "0.1.0", default-features = false, features = ["std", "xxh
 For `no_std` XXH3, enable only `xxh3` (and optionally `avx512`); dispatch then
 uses compile-time target features. The internal `_dev` feature controls tier tests.
 
+## Sans-I/O and FNV compatibility
+
+Every algorithm accepts byte slices and supports `update`/`digest` without I/O.
+`std` controls runtime CPU detection; it does not enable I/O adapters. Enable
+`io` explicitly for `std::io::Write`. The default features do not include `io`.
+
+The opt-in `fnv` feature preserves FNV-1a32/64/128 output and existing zen
+formulas. `Fnv1a64::with_basis(previous_digest)` continues a fingerprint;
+`digest_fold32` and `digest_fmix` apply the two existing finalizers without
+changing streaming state. See [formula provenance and migration guidance](https://github.com/imazen/zenhash/blob/main/docs/fnv.md).
+For new non-adversarial byte fingerprints, start with XXH3. Rapidhash v3 is
+also useful for short native keys; baseline WASM and optional wide arithmetic
+change that tradeoff. See the measured selection guidance in the linked docs.
+Both algorithms produce different IDs from FNV. Keep existing stored identifiers
+on their original formula. For hostile keys, authentication
+or tamper detection, use an appropriate keyed or cryptographic hash.
+
 ## Testing
 
-Every algorithm is compared against two independent implementations,
-[xxhash-rust](https://crates.io/crates/xxhash-rust) and
-[twox-hash](https://crates.io/crates/twox-hash): every length from 0 to 300,
-block and buffer edges up to 100,003 bytes, four seeds, custom secrets from 136
-to 1000 bytes, and ten streaming split patterns. A tier-permutation test runs
-the XXH3 long path with each SIMD tier the machine has disabled in turn. CI runs
-the tests on x86-64 and aarch64 Linux, Windows and macOS, i686, and
-wasm32-wasip1 with and without SIMD128. A differential fuzz target lives in
-`fuzz/`.
+Pinned C-reference fixtures cover the original matrix and an expanded,
+bounded subset of SMHasher3-style input families: short lengths and algorithm
+boundaries, independent data/secret patterns, repeated cycles, text prefixes,
+word permutations, single-bit edits and correlated seeds. Each case checks
+one-shot output, streaming prefixes, clone, empty updates, reset and `Hasher`;
+`io` builds also check `Write`. FNV has an independent arithmetic C oracle.
+These are output-stability tests, not SMHasher3 statistical quality tests.
 
-<!-- crates.io:skip-start -->
+The isolated runtime feature runner prevents dev-dependencies from silently
+enabling `std` in the library. CI executes its feature powerset in parallel
+Linux shards and runs the full corpus on every portability target. See
+[coverage and commands](https://github.com/imazen/zenhash/blob/main/docs/stability.md) for the exact matrix and limits.
+
+Additional tests compare xxHash against [xxhash-rust](https://crates.io/crates/xxhash-rust)
+and [twox-hash](https://crates.io/crates/twox-hash), and rapidhash v3 against the
+[rapidhash Rust port](https://crates.io/crates/rapidhash) and C golden vectors,
+including unaligned inputs and streaming splits. CI runs all algorithms on x86-64
+and aarch64 Linux/Windows, macOS ARM64, i686, s390x big-endian and WASM with and
+without SIMD128. Feature isolation and powerset checks run once on Linux.
+
+`just conformance` runs the bounded matrix; `just algorithm-tests` tests feature
+isolation. Reference sources, provenance and regeneration commands are documented
+in [tests/reference/README.md](https://github.com/imazen/zenhash/blob/main/tests/reference/README.md).
+A differential fuzz target lives in `fuzz/`.
+
 ## Benchmarks
 
+[ARM and Wasmtime measurements](https://github.com/imazen/zenhash/blob/main/benchmarks/arm_wasm_2026-10-26.md)
+cover native NEON, WASM scalar/SIMD128 and explicit wide arithmetic. The latter
+is an experimental compiler/runtime configuration, enabled only in those builds.
+
+
+Neoverse-N1, Rust 1.99.1, Wasmtime 49.0.4, no `target-cpu=native`:
+
+| XXH3-64, 64 KiB | Native NEON | WASM scalar | WASM SIMD128 |
+|---|---:|---:|---:|
+| One-shot | 10.782 GiB/s | 4.686 GiB/s | 6.931 GiB/s |
+| Streaming, 4 KiB updates | 9.539 GiB/s | 4.575 GiB/s | 6.604 GiB/s |
+
+One exploratory process with interleaved rounds; results are specific to this
+CPU/runtime. The full report includes comparator results: xxhash-rust's one-shot
+native/SIMD paths were faster here; zenhash's WASM SIMD streaming path was faster.
+The recorded resource wrapper reported `292s | peak-RSS 0.04GiB`.
+
+<!-- crates.io:skip-start -->
 Single thread, one Intel Xeon (Emerald Rapids, family 6 model 207) 4-vCPU
 VM, rustc 1.97.0, no `target-cpu=native`, against twox-hash 2.1.5 and
 xxhash-rust 0.8.19. Full tables, method and repro commands:
@@ -189,11 +313,14 @@ treat these as one machine's results.
 
 ## License
 
-MIT OR Apache-2.0, at your option.
+MIT OR Apache-2.0, at your option: [MIT](https://github.com/imazen/zenhash/blob/main/LICENSE-MIT)
+or [Apache-2.0](https://github.com/imazen/zenhash/blob/main/LICENSE-APACHE).
+The xxHash implementation preserves the upstream [BSD-2-Clause notice](https://github.com/imazen/zenhash/blob/main/LICENSE-XXHASH).
+The rapidhash port preserves its upstream [MIT copyright and permission notice](https://github.com/imazen/zenhash/blob/main/LICENSE-RAPIDHASH).
 
 ## AI-Generated Code Notice
 
-Developed with Claude (Anthropic). Not all code manually reviewed. Review
+Developed with Codex (OpenAI) and Claude (Anthropic). Not all code manually reviewed. Review
 critical paths before production use.
 
 ## Image tech I maintain
