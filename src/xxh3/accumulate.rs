@@ -630,16 +630,23 @@ mod wasm {
     fn accumulate_wasm128(mut acc: [v128; 4], stripe: &[u8; 64], key: &[u8; 64]) -> [v128; 4] {
         let (data, _) = stripe.as_chunks::<16>();
         let (keys, _) = key.as_chunks::<16>();
-        for i in 0..4 {
-            let data_vec = v128_load(&data[i]);
-            let data_key = v128_xor(data_vec, v128_load(&keys[i]));
-            // Low and high 32-bit halves of each 64-bit lane, packed into the
-            // low two 32-bit lanes for the widening multiply.
-            let lo = i32x4_shuffle::<0, 2, 0, 2>(data_key, data_key);
-            let hi = i32x4_shuffle::<1, 3, 1, 3>(data_key, data_key);
-            let product = u64x2_extmul_low_u32x4(lo, hi);
-            let data_swap = i64x2_shuffle::<1, 0>(data_vec, data_vec);
-            acc[i] = i64x2_add(product, i64x2_add(acc[i], data_swap));
+        // Pair adjacent vectors so LLVM keeps the 32-bit lanes packed.
+        // Separately shuffling one vector's halves folds into i64x2.mul,
+        // whose lowering costs extra work on current ARM WASM engines.
+        for i in [0, 2] {
+            let a = v128_load(&data[i]);
+            let b = v128_load(&data[i + 1]);
+            let x = v128_xor(a, v128_load(&keys[i]));
+            let y = v128_xor(b, v128_load(&keys[i + 1]));
+            let lo = i32x4_shuffle::<0, 2, 4, 6>(x, y);
+            let hi = i32x4_shuffle::<1, 3, 5, 7>(x, y);
+            let product_a = u64x2_extmul_low_u32x4(lo, hi);
+            let product_b = u64x2_extmul_high_u32x4(lo, hi);
+            acc[i] = i64x2_add(product_a, i64x2_add(acc[i], i64x2_shuffle::<1, 0>(a, a)));
+            acc[i + 1] = i64x2_add(
+                product_b,
+                i64x2_add(acc[i + 1], i64x2_shuffle::<1, 0>(b, b)),
+            );
         }
         acc
     }
