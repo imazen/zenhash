@@ -114,3 +114,6 @@ fn fnv_stable_across_streaming_and_offset_bases() {
     assert_eq!(zenhash::fnv1a32(b"foobar"), 0xbf9cf968);
     assert_eq!(zenhash::fnv1a64(b"foobar"), 0x85944171f73967e8);
 }
+
+#[path = "fnv_bases.rs"]
+mod full_bases;
