@@ -49,3 +49,5 @@ mutants.out*/
 __pycache__/
 
 /tests/reference/*.bak
+
+/.zenbench/
