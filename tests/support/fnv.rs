@@ -110,7 +110,7 @@ fn fnv_stable_across_streaming_and_offset_bases() {
         }
         rows += 1;
     }
-    assert_eq!(rows, 24);
+    assert_eq!(rows, 48);
     assert_eq!(zenhash::fnv1a32(b"foobar"), 0xbf9cf968);
     assert_eq!(zenhash::fnv1a64(b"foobar"), 0x85944171f73967e8);
 }

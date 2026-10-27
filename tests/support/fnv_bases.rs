@@ -68,5 +68,5 @@ fn full_width_bases_match_c() {
         }
         rows += 1;
     }
-    assert_eq!(rows, 24);
+    assert_eq!(rows, 48);
 }

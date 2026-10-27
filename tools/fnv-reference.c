@@ -4,6 +4,7 @@
 #define main original_conformance_main
 #include "hash-conformance.c"
 #undef main
+#include "conformance-patterns.h"
 
 static int full_bases(void) {
     const uint32_t bases32[]={0,UINT32_MAX,UINT32_C(1)<<31,UINT32_C(0xa5a5a5a5)};
@@ -13,11 +14,11 @@ static int full_bases(void) {
     uint8_t data[65536];
     puts("# FNV-1a full-width bases: zero, maximum, high-bit, repeated a5");
     puts("# pattern base_index fnv32 fnv64 fnv128; whole then prefix, canonical LE words");
-    for(unsigned pattern=0;pattern<6;pattern++) for(unsigned basis=0;basis<4;basis++) {
+    for(unsigned pattern=0;pattern<12;pattern++) for(unsigned basis=0;basis<4;basis++) {
         uint64_t states[3]={UINT64_C(0xcbf29ce484222325),UINT64_C(0xcbf29ce484222325),UINT64_C(0xcbf29ce484222325)};
         for(size_t index=0;index<257+sizeof(edges)/sizeof(edges[0]);index++) {
             size_t len=index<257?index:edges[index-257];
-            bytes(data,len,pattern,UINT64_C(0x9e3779b185ebca87)^len);
+            extended_bytes(data,len,pattern,UINT64_C(0x9e3779b185ebca87)^len);
             size_t split=((uint64_t)len*7^basis)%((uint64_t)len+1);
             for(unsigned part=0;part<2;part++) {
                 uint32_t a=bases32[basis];uint64_t b=bases64[basis];unsigned __int128 c=bases128[basis];
@@ -41,12 +42,12 @@ int main(int argc,char **argv) {
     uint8_t data[65536];
     puts("# FNV-1a 32/64/128; folded64 and fmix64; whole then prefix outputs");
     puts("# pattern basis(hex; 0 means standard) fnv32 fnv64 fnv128 fold32 fmix64");
-    for (unsigned pattern=0; pattern<6; pattern++) for(unsigned s=0;s<4;s++) {
+    for (unsigned pattern=0; pattern<12; pattern++) for(unsigned s=0;s<4;s++) {
         uint64_t seed=seeds[s], states[5];
         for(unsigned a=0;a<5;a++) states[a]=UINT64_C(0xcbf29ce484222325);
         for(size_t index=0;index<257+sizeof(edges)/sizeof(edges[0]);index++) {
             size_t len=index<257? index:edges[index-257];
-            bytes(data,len,pattern,seed^len);
+            extended_bytes(data,len,pattern,seed^len);
             size_t split=((uint64_t)len*7^seed)%((uint64_t)len+1);
             for(unsigned part=0;part<2;part++) {
                 uint32_t h32=seed?(uint32_t)seed:UINT32_C(0x811c9dc5);
