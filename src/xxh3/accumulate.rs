@@ -5,7 +5,7 @@
 //! per `update` (at most every 256 bytes of buffered input, or once per large
 //! slice) when streaming.
 //!
-//! magetypes 0.9.29 has no 32x32->64 widening multiply or 64-bit lane swap on
+//! magetypes 0.9.31-beta.2 has no 32x32->64 widening multiply or 64-bit lane swap on
 //! its `u64` vectors, which XXH3 needs in every stripe, so each tier is written
 //! with the intrinsics of its instruction set through `#[attune]`.
 //! The tiers share one loop, [`consume_body!`], and differ only in four

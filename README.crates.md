@@ -284,6 +284,7 @@ The recorded resource wrapper reported `292s | peak-RSS 0.04GiB`.
 
 MIT OR Apache-2.0, at your option: [MIT](https://github.com/imazen/zenhash/blob/main/LICENSE-MIT)
 or [Apache-2.0](https://github.com/imazen/zenhash/blob/main/LICENSE-APACHE).
+The xxHash implementation preserves the upstream [BSD-2-Clause notice](https://github.com/imazen/zenhash/blob/main/LICENSE-XXHASH).
 The rapidhash port preserves its upstream [MIT copyright and permission notice](https://github.com/imazen/zenhash/blob/main/LICENSE-RAPIDHASH).
 
 ## AI-Generated Code Notice

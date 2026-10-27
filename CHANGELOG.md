@@ -15,6 +15,8 @@
 - XXH32/XXH64 require opt-in `xxh32`/`xxh64` features (approved before the first release; follows `3dea22a4`).
 
 ### Added
+- README API quick reference and shared crates.io/docs.rs landing page; docs.rs builds every public algorithm and the optional I/O adapter.
+- Preserve the xxHash BSD-2-Clause notice alongside the crate MIT/Apache-2.0 and rapidhash MIT licenses.
 - Opt-in FNV-1a32/64/128 compatibility APIs, continuation offset bases, XOR-folding and fmix64 finalization (`ce5540f5`).
 - Expanded independent C stability fixtures and isolated runtime feature powerset tests.
 - XXH3 uses archmage 0.9.31-beta.2 `attune` contexts, preferring v4x with v4 fallback.
