@@ -6,7 +6,7 @@ CPU: AMD Ryzen 9 7950X; WSL2 Linux 6.18.40.1; rustc 1.99.1.
 Compared with rapidhash 4.5.1, standard v3 and identical default secrets.
 No `target-cpu=native`; default Cargo bench profile; zenbench 0.1.11.
 
-Command: `TMPDIR=$HOME/tmp ~/work/claudehints/scripts/run-heavy --jobs 4 -- just bench-rapid -- --no-busy-gate --format=md`
+Command: `just bench-rapid -- --no-busy-gate --format=md` (run through the resource wrapper with four build jobs)
 
 One exploratory run, not a cross-ISA performance claim. Small one-shot inputs
 and 4 KiB streaming updates have gaps; ARM and WASM throughput was not measured.
@@ -18,7 +18,7 @@ computed from rounded means.
 
 CPU placement: `mode=iterate inference=exploratory cpu_policy=auto cpu_placement=uniform_hardware cpu_class="capacity1024_l332768K" cpu_enforcement=cpuset cpu_effective_set=[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31] cpu_requested_set=null cpu_thread_requested=null cpu_thread_effective=null cpu_class_uniform=true pool_thread_count=unknown cpu_frequency_verified=false`
 
-**git:** `16ab32136e74b56d3c458c87a725ac6475af4b98`  
+**git:** `16ab32136e74b56d3c458c87a725ac6475af4b98`
 **total:** 7.1s  **waits:** 0 (0.0s)
 
 CPU placement: `mode=iterate inference=exploratory cpu_policy=auto cpu_placement=uniform_hardware cpu_class="capacity1024_l332768K" cpu_enforcement=cpuset cpu_effective_set=[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31] cpu_requested_set=null cpu_thread_requested=null cpu_thread_effective=[0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,25,26,27,28,29,30,31] cpu_class_uniform=true pool_thread_count=unknown cpu_frequency_verified=false`
