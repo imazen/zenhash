@@ -2,7 +2,8 @@
     feature = "xxh3",
     feature = "xxh32",
     feature = "xxh64",
-    feature = "rapidhash"
+    feature = "rapidhash",
+    feature = "fnv"
 ))]
 
 // One integration-test binary: every top-level file in tests/ links
@@ -67,3 +68,19 @@ pub(crate) fn interesting_lengths() -> Vec<usize> {
 fn c_reference_conformance_matrix() {
     conformance::verify();
 }
+
+#[path = "../support/stability.rs"]
+mod stability;
+#[cfg(any(
+    feature = "xxh3",
+    feature = "xxh32",
+    feature = "xxh64",
+    feature = "rapidhash"
+))]
+#[test]
+fn expanded_stability() {
+    stability::verify();
+}
+#[cfg(feature = "fnv")]
+#[path = "../support/fnv.rs"]
+mod fnv;

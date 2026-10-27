@@ -13,6 +13,13 @@
 #[path = "it/conformance.rs"]
 mod conformance;
 
+#[path = "support/stability.rs"]
+mod stability;
+
+#[cfg(feature = "fnv")]
+#[path = "support/fnv.rs"]
+mod fnv;
+
 use archmage::testing::{CompileTimePolicy, for_each_token_permutation};
 
 /// Deterministic test bytes (splitmix64).
@@ -64,6 +71,7 @@ fn xxh3_long_paths_identical_on_every_tier() {
         })
         .collect();
     let report = for_each_token_permutation(CompileTimePolicy::Warn, |perm| {
+        stability::verify();
         #[cfg(all(feature = "xxh32", feature = "xxh64", feature = "rapidhash"))]
         conformance::verify();
         for c in &cases {
