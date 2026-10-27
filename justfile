@@ -232,3 +232,8 @@ stability-no-std:
 # Fixed workload for external perf sampling; WASM emits jitdump in the cwd.
 profile-hash mode algorithm len chunk outer repetitions:
     cargo run --release --manifest-path tools/portable-bench/Cargo.toml --bin profile_hash -- {{mode}} {{algorithm}} {{len}} {{chunk}} {{outer}} {{repetitions}}
+
+# Newer WASM runtimes can lower full-width multiplication directly.
+stability-wasm-wide:
+    RUSTFLAGS="-Ctarget-feature=-simd128,+wide-arithmetic" CARGO_TARGET_WASM32_WASIP1_RUNNER="wasmtime -Wwide-arithmetic=y" cargo test --manifest-path tools/stability/Cargo.toml --target wasm32-wasip1 --all-features
+    RUSTFLAGS="-Ctarget-feature=+simd128,+wide-arithmetic" CARGO_TARGET_WASM32_WASIP1_RUNNER="wasmtime -Wwide-arithmetic=y" cargo test --manifest-path tools/stability/Cargo.toml --target wasm32-wasip1 --all-features

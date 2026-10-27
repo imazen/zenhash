@@ -16,7 +16,12 @@ output = root / "target/modules"
 output.mkdir(parents=True, exist_ok=True)
 manifest = str(root / "Cargo.toml")
 target = "wasm32-unknown-unknown"
-for name, flag in [("scalar", "-simd128"), ("simd128", "+simd128")]:
+for name, flag in [
+    ("scalar", "-simd128"),
+    ("simd128", "+simd128"),
+    ("wide", "-simd128,+wide-arithmetic"),
+    ("simd128-wide", "+simd128,+wide-arithmetic"),
+]:
     env = dict(os.environ, RUSTFLAGS=f"-Ctarget-feature={flag} -Csymbol-mangling-version=v0")
     base = ["cargo", "rustc", "--manifest-path", manifest, "--release", "--target", target]
     subprocess.run(base + ["--lib", "--", "--emit=llvm-ir,link"], env=env, check=True)

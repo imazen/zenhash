@@ -9,7 +9,7 @@ fn main() {
     assert_eq!(
         args.len(),
         7,
-        "mode(native/scalar/simd128) algorithm len chunk outer repetitions"
+        "mode(native/scalar/simd128/wide/simd128-wide) algorithm len chunk outer repetitions"
     );
     let algorithm: u32 = args[2].parse().unwrap();
     let len: u32 = args[3].parse().unwrap();
@@ -29,12 +29,14 @@ fn main() {
             ));
         }
     } else {
-        assert!(["scalar", "simd128"].contains(&args[1].as_str()));
+        assert!(["scalar", "simd128", "wide", "simd128-wide"].contains(&args[1].as_str()));
         let root =
             PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../wasm-workload/target/modules");
         let mut config = wasmtime::Config::new();
         config
-            .wasm_simd(true)
+            .wasm_relaxed_simd(false)
+            .wasm_simd(args[1].contains("simd128"))
+            .wasm_wide_arithmetic(args[1].contains("wide"))
             .cranelift_opt_level(wasmtime::OptLevel::Speed)
             .profiler(wasmtime::ProfilingStrategy::JitDump);
         let module = WasmBench::from_bytes_with_config(

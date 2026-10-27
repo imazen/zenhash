@@ -9,19 +9,30 @@ fn portable(suite: &mut Suite) {
         suite.set_group_filter(filter);
     }
     let root = PathBuf::from(env!("CARGO_MANIFEST_DIR")).join("../wasm-workload/target/modules");
-    let modules: [(String, WasmBench, String); 2] = ["scalar", "simd128"].map(|name| {
-        let path = root.join(format!("{name}.wasm"));
-        if name == "scalar" {
-            let mut config = zenbench::wasm::wasmtime::Config::new();
-            config.wasm_relaxed_simd(false).wasm_simd(false);
-            let engine = zenbench::wasm::wasmtime::Engine::new(&config).unwrap();
-            zenbench::wasm::wasmtime::Module::from_file(&engine, &path)
-                .expect("scalar module must not contain SIMD instructions");
-        }
-        let wasm = WasmBench::from_file(&path).unwrap();
-        let symbol = std::fs::read_to_string(root.join(format!("{name}.symbol"))).unwrap();
-        (name.into(), wasm, symbol.trim().into())
-    });
+    let modules: [(String, WasmBench, String); 4] = ["scalar", "simd128", "wide", "simd128-wide"]
+        .map(|name| {
+            let path = root.join(format!("{name}.wasm"));
+            {
+                let mut config = zenbench::wasm::wasmtime::Config::new();
+                config
+                    .wasm_relaxed_simd(false)
+                    .wasm_simd(name.contains("simd128"))
+                    .wasm_wide_arithmetic(name.contains("wide"));
+                let engine = zenbench::wasm::wasmtime::Engine::new(&config).unwrap();
+                zenbench::wasm::wasmtime::Module::from_file(&engine, &path)
+                    .expect("module must match its declared SIMD/wide-arithmetic capabilities");
+            }
+            let mut runtime = zenbench::wasm::wasmtime::Config::new();
+            runtime
+                .wasm_relaxed_simd(false)
+                .wasm_simd(name.contains("simd128"))
+                .wasm_wide_arithmetic(name.contains("wide"))
+                .cranelift_opt_level(zenbench::wasm::wasmtime::OptLevel::Speed);
+            let wasm =
+                WasmBench::from_bytes_with_config(&std::fs::read(&path).unwrap(), runtime).unwrap();
+            let symbol = std::fs::read_to_string(root.join(format!("{name}.symbol"))).unwrap();
+            (name.into(), wasm, symbol.trim().into())
+        });
     // Check every method, including high halves of 128-bit output indirectly
     // through the independent stability suite, before starting any timing.
     for len in [0, 4, 16, 64, 240, 241, 1024, 65536] {
@@ -54,7 +65,7 @@ fn portable(suite: &mut Suite) {
     // Paired comparisons for the FNV replacement decision on short byte keys.
     for len in [4u32, 16, 64, 241, 1024, 65536] {
         let repetitions = (1048576 / len).clamp(1, 16384);
-        for runtime in 0..3 {
+        for runtime in 0..=modules.len() {
             suite.group(format!("replacement/{len}/runtime{runtime}"), |g| {
                 g.throughput(Throughput::Bytes(u64::from(len) * u64::from(repetitions)));
                 g.config().warmup_time = Duration::from_millis(50);

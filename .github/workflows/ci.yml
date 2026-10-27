@@ -114,6 +114,16 @@ jobs:
           cargo test --manifest-path tools/stability/Cargo.toml --target wasm32-wasip1 --no-default-features --features xxh3,xxh32,xxh64,rapidhash,fnv
         env:
           RUSTFLAGS: -D warnings -Ctarget-feature=+simd128
+      - name: Test wide arithmetic without SIMD
+        run: cargo test --manifest-path tools/stability/Cargo.toml --target wasm32-wasip1 --all-features
+        env:
+          RUSTFLAGS: -D warnings -Ctarget-feature=-simd128,+wide-arithmetic
+          CARGO_TARGET_WASM32_WASIP1_RUNNER: wasmtime -Wwide-arithmetic=y
+      - name: Test wide arithmetic with SIMD128
+        run: cargo test --manifest-path tools/stability/Cargo.toml --target wasm32-wasip1 --all-features
+        env:
+          RUSTFLAGS: -D warnings -Ctarget-feature=+simd128,+wide-arithmetic
+          CARGO_TARGET_WASM32_WASIP1_RUNNER: wasmtime -Wwide-arithmetic=y
 
   no-std:
     name: no_std (thumbv7em-none-eabihf)
