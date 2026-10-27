@@ -20,19 +20,22 @@ exclude = [
 ]
 
 [features]
-default = ["std", "avx512"]
+default = ["std", "xxh3", "avx512"]
+# XXH3 64/128, streaming state, custom-secret errors, and SIMD dispatch.
+xxh3 = ["dep:archmage", "dep:whereat"]
 # archmage detects CPU features at runtime only with its `std` feature. Without
 # it, dispatch sees only the features enabled at compile time.
-std = ["archmage/std", "whereat/std"]
+std = ["archmage?/std", "whereat?/std"]
 # AVX-512 tier for the XXH3 accumulator. On by default; disable it with
-# `default-features = false, features = ["std"]` to save compile time.
-avx512 = ["archmage/avx512"]
+# `default-features = false, features = ["std", "xxh3"]` to save compile time.
+# Does not enable XXH3 by itself.
+avx512 = ["archmage?/avx512"]
 # Dev-only: lets tests disable SIMD tiers the target guarantees. Never in `default`.
-_dev = ["archmage/testable_dispatch"]
+_dev = ["archmage?/testable_dispatch"]
 
 [dependencies]
-archmage = { version = ">=0.9.29, <=0.9.31-beta.1", default-features = false }
-whereat = { version = "0.1.5", default-features = false }
+archmage = { version = ">=0.9.29, <=0.9.31-beta.1", default-features = false, optional = true }
+whereat = { version = "0.1.5", default-features = false, optional = true }
 
 [dev-dependencies]
 archmage = { version = ">=0.9.29, <=0.9.31-beta.1", features = ["std"] }
@@ -58,11 +61,13 @@ opt-level = 2
 [[bench]]
 name = "hash"
 harness = false
+required-features = ["xxh3"]
 
 [[bench]]
 name = "adversarial"
 harness = false
+required-features = ["xxh3"]
 
 [[example]]
 name = "hash_file"
-required-features = ["std"]
+required-features = ["std", "xxh3"]

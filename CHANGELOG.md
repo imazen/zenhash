@@ -14,6 +14,11 @@
 <!-- Breaks that ship together in the next leading-digit bump (0.x: the minor). None yet. -->
 
 ### Added
+- Default-enabled `xxh3` feature gates XXH3 functions, streaming state,
+  custom-secret errors and optional SIMD/error dependencies. XXH32/XXH64
+  remain available without it; `std` and `avx512` do not enable XXH3.
+- Document safe-Rust and cross-ISA/WASM performance goals, published SMHasher3
+  findings, and guidance for trusted, statistical and adversarial workloads.
 - `xxh3_64`, `xxh3_128` and their `_with_seed` / `_with_secret` variants;
   streaming `Xxh3` with 64- and 128-bit digests (1c0b386)
 - `xxh64`, `xxh32`, streaming `Xxh64`, `Xxh32` (1c0b386), with `new()` and

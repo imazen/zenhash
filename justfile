@@ -6,10 +6,12 @@ QUALITY := ZENUTILS / "quality"
 default:
     @just --list
 
-# Tests in the three feature configurations CI runs
+# Test classic-only, XXH3 without std/AVX-512, and the default/full configurations
 test:
     cargo test
     cargo test --no-default-features
+    cargo test --no-default-features --features xxh3
+    cargo test --no-default-features --features std,xxh3
     cargo test --all-features
 
 clippy:
@@ -20,7 +22,7 @@ clippy:
 clippy-arch:
     cargo clippy --all-targets --all-features --target aarch64-unknown-linux-gnu -- -D warnings
     cargo clippy --all-targets --all-features --target x86_64-unknown-linux-gnu -- -D warnings
-    RUSTFLAGS="-Ctarget-feature=+simd128" cargo clippy --lib --no-default-features --target wasm32-unknown-unknown -- -D warnings
+    RUSTFLAGS="-Ctarget-feature=+simd128" cargo clippy --lib --no-default-features --features xxh3 --target wasm32-unknown-unknown -- -D warnings
 
 # Run the NEON tier under qemu (apt: qemu-user gcc-aarch64-linux-gnu; on Ubuntu
 # that package conflicts with gcc-multilib, which the i686 tests need)
@@ -38,7 +40,9 @@ test-s390x-qemu:
 # no_std and wasm builds
 check-targets:
     cargo check --target thumbv7em-none-eabihf --no-default-features
+    cargo check --target thumbv7em-none-eabihf --no-default-features --features xxh3
     cargo check --target wasm32-unknown-unknown --no-default-features
+    cargo check --target wasm32-unknown-unknown --no-default-features --features xxh3
     RUSTFLAGS="-Ctarget-feature=+simd128" cargo check --target wasm32-unknown-unknown
 
 # WASI tests under wasmtime, with and without SIMD128
@@ -82,7 +86,7 @@ bench *ARGS:
 
 # Same, without the AVX-512 tier (what a CPU without AVX-512 runs)
 bench-no-avx512 *ARGS:
-    cargo bench --bench hash --no-default-features --features std {{ARGS}}
+    cargo bench --bench hash --no-default-features --features std,xxh3 {{ARGS}}
 
 # Adversarial: every competitor (incl. the C reference) built for this exact
 # CPU with fat LTO; zenhash gets the same flags. See benches/adversarial.rs.
@@ -136,3 +140,9 @@ beta-cohort-check:
     cargo fmt --check
     cargo clippy --locked --lib -- -D warnings
     cargo test --locked --all-features
+
+# Verify the algorithm gate, portability, and public docs after feature changes.
+feature-gate-check: clippy check-targets test-wasm features api-doc
+    cargo test --no-default-features --features std
+    RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --all-features
+    RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --no-default-features

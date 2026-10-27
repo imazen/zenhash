@@ -6,7 +6,7 @@
 # impls omitted; re-export duplicates annotated `[also: path]`.
 # DO NOT EDIT BY HAND — commit regenerated changes with the code.
 #
-# files: zenhash.txt 38 lines (supported surface) | zenhash.features.txt 0 added (features: avx512,std) | zenhash.internal.txt 1 lines (1 hidden + 0 excluded-feature)
+# files: zenhash.txt 38 lines (supported surface) | zenhash.features.txt 0 added (features: avx512,std,xxh3) | zenhash.internal.txt 1 lines (1 hidden + 0 excluded-feature)
 
 ## summary
 #

@@ -1,10 +1,13 @@
 //! Parity with two independent implementations: xxhash-rust and twox-hash.
 
 use crate::{interesting_lengths, test_bytes};
-use twox_hash::{XxHash3_64, XxHash3_128, XxHash32, XxHash64};
+#[cfg(feature = "xxh3")]
+use twox_hash::{XxHash3_64, XxHash3_128};
+use twox_hash::{XxHash32, XxHash64};
 
 const SEEDS: [u64; 4] = [0, 1, 0x9E37_79B1_85EB_CA87, u64::MAX];
 
+#[cfg(feature = "xxh3")]
 #[test]
 fn xxh3_64_matches_oracles() {
     for len in interesting_lengths() {
@@ -30,6 +33,7 @@ fn xxh3_64_matches_oracles() {
     }
 }
 
+#[cfg(feature = "xxh3")]
 #[test]
 fn xxh3_128_matches_oracles() {
     for len in interesting_lengths() {
@@ -55,6 +59,7 @@ fn xxh3_128_matches_oracles() {
     }
 }
 
+#[cfg(feature = "xxh3")]
 #[test]
 fn xxh3_custom_secret_matches_oracles() {
     // 136 is the minimum; 137 and 200 give block sizes that don't divide evenly;
@@ -86,6 +91,7 @@ fn xxh3_custom_secret_matches_oracles() {
     }
 }
 
+#[cfg(feature = "xxh3")]
 #[test]
 fn short_secret_is_rejected() {
     let secret = [7u8; 135];
@@ -141,37 +147,58 @@ const SPLITS: &[&[usize]] = &[
 fn streaming_matches_one_shot() {
     let mut lengths = interesting_lengths();
     lengths.retain(|&l| l <= 20_000);
+    #[cfg(feature = "xxh3")]
     let secret = test_bytes(171, 9);
     for len in lengths {
         let data = test_bytes(len, len as u64 + 11);
-        let want64 = zenhash::xxh3_64(&data);
-        let want128 = zenhash::xxh3_128(&data);
-        let want_seeded = zenhash::xxh3_64_with_seed(&data, 42);
-        let want_seeded128 = zenhash::xxh3_128_with_seed(&data, 42);
-        let want_secret = zenhash::xxh3_64_with_secret(&data, &secret).unwrap();
-        let want_secret128 = zenhash::xxh3_128_with_secret(&data, &secret).unwrap();
+        #[cfg(feature = "xxh3")]
+        let (want64, want128, want_seeded, want_seeded128, want_secret, want_secret128) = {
+            let want64 = zenhash::xxh3_64(&data);
+            let want128 = zenhash::xxh3_128(&data);
+            let want_seeded = zenhash::xxh3_64_with_seed(&data, 42);
+            let want_seeded128 = zenhash::xxh3_128_with_seed(&data, 42);
+            let want_secret = zenhash::xxh3_64_with_secret(&data, &secret).unwrap();
+            let want_secret128 = zenhash::xxh3_128_with_secret(&data, &secret).unwrap();
+            (
+                want64,
+                want128,
+                want_seeded,
+                want_seeded128,
+                want_secret,
+                want_secret128,
+            )
+        };
         let want_xxh64 = zenhash::xxh64(&data, 42);
         let want_xxh32 = zenhash::xxh32(&data, 42);
         for split in SPLITS {
+            #[cfg(feature = "xxh3")]
             let mut a = zenhash::Xxh3::new();
+            #[cfg(feature = "xxh3")]
             let mut b = zenhash::Xxh3::with_seed(42);
+            #[cfg(feature = "xxh3")]
             let mut c = zenhash::Xxh3::with_secret(&secret).unwrap();
             let mut d = zenhash::Xxh64::with_seed(42);
             let mut e = zenhash::Xxh32::with_seed(42);
             chunked(&data, split, |chunk| {
+                #[cfg(feature = "xxh3")]
                 a.update(chunk);
+                #[cfg(feature = "xxh3")]
                 b.update(chunk);
+                #[cfg(feature = "xxh3")]
                 c.update(chunk);
                 d.update(chunk);
                 e.update(chunk);
             });
             let ctx = format!("len {len} split {split:?}");
-            assert_eq!(a.digest(), want64, "{ctx}");
-            assert_eq!(a.digest128(), want128, "{ctx}");
-            assert_eq!(b.digest(), want_seeded, "{ctx}");
-            assert_eq!(b.digest128(), want_seeded128, "{ctx}");
-            assert_eq!(c.digest(), want_secret, "{ctx}");
-            assert_eq!(c.digest128(), want_secret128, "{ctx}");
+            #[cfg(feature = "xxh3")]
+            {
+                assert_eq!(a.digest(), want64, "{ctx}");
+                assert_eq!(a.digest128(), want128, "{ctx}");
+                assert_eq!(b.digest(), want_seeded, "{ctx}");
+                assert_eq!(b.digest128(), want_seeded128, "{ctx}");
+                assert_eq!(c.digest(), want_secret, "{ctx}");
+                assert_eq!(c.digest128(), want_secret128, "{ctx}");
+            }
             assert_eq!(d.digest(), want_xxh64, "{ctx}");
             assert_eq!(e.digest(), want_xxh32, "{ctx}");
         }
@@ -181,16 +208,18 @@ fn streaming_matches_one_shot() {
 #[test]
 fn digest_does_not_consume_and_reset_restarts() {
     let data = test_bytes(5000, 1);
-    let mut h = zenhash::Xxh3::with_seed(3);
-    h.update(&data[..2500]);
-    let mid = h.digest();
-    assert_eq!(mid, zenhash::xxh3_64_with_seed(&data[..2500], 3));
-    h.update(&data[2500..]);
-    assert_eq!(h.digest(), zenhash::xxh3_64_with_seed(&data, 3));
-    h.reset();
-    h.update(&data[..100]);
-    assert_eq!(h.digest(), zenhash::xxh3_64_with_seed(&data[..100], 3));
-
+    #[cfg(feature = "xxh3")]
+    {
+        let mut h = zenhash::Xxh3::with_seed(3);
+        h.update(&data[..2500]);
+        let mid = h.digest();
+        assert_eq!(mid, zenhash::xxh3_64_with_seed(&data[..2500], 3));
+        h.update(&data[2500..]);
+        assert_eq!(h.digest(), zenhash::xxh3_64_with_seed(&data, 3));
+        h.reset();
+        h.update(&data[..100]);
+        assert_eq!(h.digest(), zenhash::xxh3_64_with_seed(&data[..100], 3));
+    }
     let mut h = zenhash::Xxh64::with_seed(3);
     h.update(&data);
     h.reset();
@@ -198,6 +227,7 @@ fn digest_does_not_consume_and_reset_restarts() {
     assert_eq!(h.digest(), zenhash::xxh64(&data[..40], 3));
 }
 
+#[cfg(feature = "xxh3")]
 #[test]
 fn hasher_trait_matches_oracle_hasher() {
     use core::hash::Hasher;

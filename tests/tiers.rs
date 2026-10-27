@@ -7,6 +7,8 @@
 //! ran in parallel (found by cargo-mutants; see CLAUDE.md). A separate
 //! process makes every permutation deterministic.
 
+#![cfg(feature = "xxh3")]
+
 use archmage::testing::{CompileTimePolicy, for_each_token_permutation};
 
 /// Deterministic test bytes (splitmix64).

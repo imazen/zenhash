@@ -1,6 +1,7 @@
 // One integration-test binary: every top-level file in tests/ links
 // separately, so new test files go here as modules.
 mod api;
+#[cfg(feature = "xxh3")]
 mod fuzz_regression;
 mod oracle;
 mod random;

@@ -10,7 +10,7 @@ cargo-fuzz = true
 [dependencies]
 libfuzzer-sys = "0.4"
 xxhash-rust = { version = "0.8.19", features = ["xxh3", "xxh32", "xxh64"] }
-zenhash = { path = ".." }
+zenhash = { path = "..", features = ["xxh3"] }
 
 [[bin]]
 name = "hash_parity"

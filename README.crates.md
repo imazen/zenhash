@@ -2,7 +2,15 @@
 
 # zenhash
 
-zenhash is an implementation of the xxHash family (XXH3 64/128, XXH64, XXH32) in safe Rust, with runtime SIMD dispatch for XXH3.
+zenhash provides hash algorithms in safe Rust. It currently implements the xxHash
+family (XXH3 64/128, XXH64, XXH32), with runtime SIMD dispatch for XXH3.
+Algorithms can be added independently; XXH3 is behind the default-enabled `xxh3`
+feature.
+
+Our goal is `#![forbid(unsafe_code)]` with competitive performance across x86,
+ARM and WebAssembly, including WASM SIMD128. Cross-ISA performance parity is a
+goal, not a measured guarantee; the published benchmark results below cover one
+x86 CPU. Hash outputs must match the reference bit for bit on every ISA.
 
 `no_std` + `alloc` · `#![forbid(unsafe_code)]` · MSRV 1.89 · x86-64 (AVX-512, AVX2, SSE2) / aarch64 (NEON) / wasm32 (SIMD128) · MIT OR Apache-2.0
 
@@ -14,6 +22,8 @@ zenhash = "0.1.0"
 ```
 
 ```rust
+# #[cfg(feature = "xxh3")]
+# {
 let h64: u64 = zenhash::xxh3_64(b"hello world");
 let h128: u128 = zenhash::xxh3_128(b"hello world");
 assert_eq!(h64, 0xD447_B1EA_40E6_988B);
@@ -25,7 +35,26 @@ h.update(b"hello ");
 h.update(b"world");
 assert_eq!(h.digest(), h64);
 assert_eq!(h.digest128(), h128);
+# }
 ```
+
+## When to use XXH3
+
+XXH3 is a fast, non-cryptographic hash with stable, portable output and streaming
+support. It is useful for trusted-data hash tables, cache lookups and deduplication
+candidate selection when collisions are resolved by comparing the original data.
+It can also detect accidental changes where a non-cryptographic checksum is sufficient.
+
+It is unsuitable for authentication, passwords, attacker-controlled hash-table
+keys, or content identifiers whose correctness or security assumes collisions
+cannot be constructed. A seed or custom secret does not make it cryptographic.
+The 128-bit output is not a guarantee of ideal 128-bit collision resistance.
+
+SMHasher3 reports **223/250 tests passing for XXH3-64** and **214/250 for
+XXH3-128**, with bit-independence, structured-input and seed-related failures.
+These are published algorithm results, not a SMHasher3 run against zenhash.
+See [XXH3 quality and usage](https://github.com/imazen/zenhash/blob/main/docs/xxh3-quality.md)
+for primary sources, what the failures mean, and choosing a hash for your workload.
 
 ## Status
 
@@ -93,8 +122,24 @@ dispatch sees only the features enabled at compile time. Dispatch uses
 
 | Feature | Default | Effect |
 |---|---|---|
-| `std` | yes | Runtime CPU detection; `std::io::Write` for `Xxh3`. |
-| `avx512` | yes | Compiles the AVX-512 tier. On the benchmark CPU, XXH3-64 at 64 KiB ran at 42.3 GiB/s with it and 32.3 GiB/s without (separate runs). Measure on your hardware: AVX-512 behaves differently across CPU generations. |
+| `xxh3` | yes | XXH3 64/128 functions, `Xxh3`, custom-secret `Error` and `XXH3_SECRET_SIZE_MIN`; enables the optional archmage and whereat dependencies. |
+| `std` | yes | Runtime CPU detection for XXH3; `std::io::Write` for all enabled hashers. |
+| `avx512` | yes | Compiles the AVX-512 tier when `xxh3` is enabled; does not enable XXH3 by itself. On the benchmark CPU, XXH3-64 at 64 KiB ran at 42.3 GiB/s with it and 32.3 GiB/s without (separate runs). Measure on your hardware: AVX-512 behaves differently across CPU generations. |
+
+XXH32 and XXH64 are always available. To use them without XXH3 or its dependencies:
+
+```toml
+zenhash = { version = "0.1.0", default-features = false }
+```
+
+For XXH3 with `std` and runtime dispatch but without AVX-512:
+
+```toml
+zenhash = { version = "0.1.0", default-features = false, features = ["std", "xxh3"] }
+```
+
+For `no_std` XXH3, enable only `xxh3` (and optionally `avx512`); dispatch then
+uses compile-time target features. The internal `_dev` feature controls tier tests.
 
 ## Testing
 
