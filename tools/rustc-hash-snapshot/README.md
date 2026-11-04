@@ -23,6 +23,10 @@ just fxhash-snapshot-test --features std
 just fxhash-snapshot-probe
 CARGO_TARGET_WASM32_WASIP1_RUNNER=wasmtime just fxhash-snapshot-test --target wasm32-wasip1
 CARGO_TARGET_WASM32_WASIP1_RUNNER=wasmtime just fxhash-snapshot-probe --target wasm32-wasip1
+# Experimental compiler/runtime proposal; inspect the probe cfg result.
+RUSTFLAGS="-Ctarget-feature=+wide-arithmetic" \
+  CARGO_TARGET_WASM32_WASIP1_RUNNER="wasmtime -Wwide-arithmetic=y" \
+  just fxhash-snapshot-probe --target wasm32-wasip1
 ```
 
 Keep upstream source byte-identical. Format only our `examples/contract_probe.rs`
@@ -40,6 +44,12 @@ not benchmark timings.
 | `hello`, then ` world` | `aa1cc7e688fc1de9` | `000000000e8d67dc` |
 | empty, then `hello world` | `5cfac8441a52a4c8` | `0000000063108f12` |
 | `hello world`, then empty | `b4c786059a9668b9` | `0000000092fcfdc5` |
+
+The optional wide-arithmetic probe also ran under Rust 1.99.1 and Wasmtime
+40.0.1. It retained the same wasm32 outputs: despite the experimental compiler
+flag, both `rustc --print cfg` and the probe reported no `wide-arithmetic`
+target-feature cfg. The upstream conditional wide-multiply branch was therefore
+not selected. This run does not validate that additional source branch.
 
 `FxHasher` stores `usize`, uses pointer-width-specific constants and final
 rotation, and chooses different multiplication mixes on different targets.
