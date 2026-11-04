@@ -580,6 +580,7 @@ fn long_128_seeded(data: &[u8], seed: u64) -> u128 {
 /// assert_eq!(zenhash::xxh3_64(b""), 0x2D06_8005_38D3_94C2);
 /// ```
 #[must_use]
+#[cfg_attr(target_arch = "wasm32", inline)]
 pub fn xxh3_64(data: &[u8]) -> u64 {
     match data.len() {
         0..=16 => len_0to16_64(data, default_short_secret(), 0),
@@ -597,6 +598,7 @@ pub fn xxh3_64(data: &[u8]) -> u64 {
 /// assert_ne!(zenhash::xxh3_64_with_seed(b"abc", 1), zenhash::xxh3_64(b"abc"));
 /// ```
 #[must_use]
+#[cfg_attr(target_arch = "wasm32", inline)]
 pub fn xxh3_64_with_seed(data: &[u8], seed: u64) -> u64 {
     match data.len() {
         0..=16 => len_0to16_64(data, default_short_secret(), seed),
@@ -636,6 +638,7 @@ pub fn xxh3_64_with_secret(data: &[u8], secret: &[u8]) -> Result<u64, At<Error>>
 /// assert_eq!(zenhash::xxh3_128(b""), 0x99AA_06D3_0147_98D8_6001_C324_468D_497F);
 /// ```
 #[must_use]
+#[cfg_attr(target_arch = "wasm32", inline)]
 pub fn xxh3_128(data: &[u8]) -> u128 {
     match data.len() {
         0..=16 => len_0to16_128(data, default_short_secret(), 0),
@@ -650,6 +653,7 @@ pub fn xxh3_128(data: &[u8]) -> u128 {
 /// [`xxh3_64_with_seed`]: the low 64 bits match that function only for
 /// inputs of 1 to 3 bytes or over 240 bytes.
 #[must_use]
+#[cfg_attr(target_arch = "wasm32", inline)]
 pub fn xxh3_128_with_seed(data: &[u8], seed: u64) -> u128 {
     match data.len() {
         0..=16 => len_0to16_128(data, default_short_secret(), seed),

@@ -1,0 +1,17 @@
+[package]
+name = "zenhash-wasm-workload"
+version = "0.0.0"
+edition = "2024"
+publish = false
+
+[dependencies]
+zenhash = { path = "../..", default-features = false, features = ["std", "xxh3", "xxh32", "xxh64", "rapidhash", "fnv"] }
+
+xxhash-rust = { version = "0.8.19", features = ["xxh3"] }
+rapidhash = { version = "4.5.1", default-features = false }
+
+[profile.release]
+lto = "thin"
+debug = 0
+
+[workspace]

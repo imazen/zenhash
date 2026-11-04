@@ -3,7 +3,9 @@
 /// From the xxHash README / reference test suite: hashes of the empty input.
 #[test]
 fn empty_input() {
+    #[cfg(feature = "xxh32")]
     assert_eq!(zenhash::xxh32(b"", 0), 0x02CC_5D05);
+    #[cfg(feature = "xxh64")]
     assert_eq!(zenhash::xxh64(b"", 0), 0xEF46_DB37_51D8_E999);
     #[cfg(feature = "xxh3")]
     {
