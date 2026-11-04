@@ -4,7 +4,7 @@ version = "0.1.0"
 edition = "2024"
 rust-version = "1.89"
 license = "MIT OR Apache-2.0"
-description = "Portable hashing and streaming in safe Rust: XXH3, rapidhash v3 and FNV compatibility."
+description = "Safe Rust hashing: XXH3, rapidhash v3, FNV and a pinned nonportable FxHasher."
 repository = "https://github.com/imazen/zenhash"
 documentation = "https://docs.rs/zenhash"
 homepage = "https://github.com/imazen/zenhash"
@@ -22,7 +22,7 @@ exclude = [
 
 # Show every supported algorithm and the I/O adapter, without the internal test feature.
 [package.metadata.docs.rs]
-features = ["xxh3", "rapidhash", "fnv", "xxh32", "xxh64", "io"]
+features = ["xxh3", "rapidhash", "fnv", "xxh32", "xxh64", "fxhash", "io"]
 default-target = "x86_64-unknown-linux-gnu"
 targets = ["aarch64-unknown-linux-gnu", "wasm32-unknown-unknown"]
 
@@ -32,6 +32,8 @@ default = ["std", "avx512"]
 rapidhash = []
 # Stable FNV-1a compatibility fingerprints (32/64/128 bits).
 fnv = []
+# Version-pinned, nonportable typed hashing for trusted in-memory tables.
+fxhash = ["dep:rustc-hash"]
 # Classic algorithms for existing checksum and format interoperability.
 xxh32 = []
 xxh64 = []
@@ -50,6 +52,7 @@ avx512 = ["archmage?/avx512"]
 _dev = ["archmage?/testable_dispatch"]
 
 [dependencies]
+rustc-hash = { version = "=2.1.3", default-features = false, optional = true }
 archmage = { version = "=0.9.31-beta.2", default-features = false, optional = true }
 whereat = { version = "0.1.5", default-features = false, optional = true }
 

@@ -16,6 +16,7 @@
 - XXH32/XXH64 require opt-in `xxh32`/`xxh64` features (approved before the first release; follows `3dea22a4`).
 
 ### Added
+- Opt-in `nonportable::FxHasher`, with private backend `rustc-hash = "=2.1.3"`, typed integer forwarding and no_std support.
 - README API quick reference and shared crates.io/docs.rs landing page; docs.rs builds every public algorithm and the optional I/O adapter.
 - Preserve the xxHash BSD-2-Clause notice alongside the crate MIT/Apache-2.0 and rapidhash MIT licenses.
 - Opt-in FNV-1a32/64/128 compatibility APIs, continuation offset bases, XOR-folding and fmix64 finalization (`ce5540f5`).

@@ -18,6 +18,9 @@ whereat::define_at_crate_info!();
     feature = "rapidhash"
 ))]
 mod common;
+#[cfg(feature = "fxhash")]
+pub mod nonportable;
+
 #[cfg(feature = "fnv")]
 mod fnv;
 #[cfg(feature = "fnv")]

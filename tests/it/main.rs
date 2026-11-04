@@ -3,7 +3,8 @@
     feature = "xxh32",
     feature = "xxh64",
     feature = "rapidhash",
-    feature = "fnv"
+    feature = "fnv",
+    feature = "fxhash"
 ))]
 
 // One integration-test binary: every top-level file in tests/ links
@@ -75,6 +76,13 @@ fn c_reference_conformance_matrix() {
     conformance::verify();
 }
 
+#[cfg(any(
+    feature = "xxh3",
+    feature = "xxh32",
+    feature = "xxh64",
+    feature = "rapidhash",
+    feature = "fnv"
+))]
 #[path = "../support/stability.rs"]
 mod stability;
 #[cfg(any(
@@ -90,3 +98,7 @@ fn expanded_stability() {
 #[cfg(feature = "fnv")]
 #[path = "../support/fnv.rs"]
 mod fnv;
+
+#[cfg(feature = "fxhash")]
+#[path = "../support/fxhash.rs"]
+mod fxhash;

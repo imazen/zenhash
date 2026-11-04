@@ -1,5 +1,5 @@
 # zenhash public API — additions from non-default features
-# features: avx512,fnv,io,rapidhash,std,xxh3,xxh32,xxh64
+# features: avx512,fnv,fxhash,io,rapidhash,std,xxh3,xxh32,xxh64
 # (regenerated on every `cargo test` by zenutils-apidoc; ZEN_API_DOC=check verifies, =off skips).
 # Encodings: crate-name prefix stripped; auto traits collapse to a
 # count + exceptions; trait impls collapse to one roster line per
@@ -9,20 +9,26 @@
 
 ## summary
 #
-#   pub types (struct/enum/trait/alias)         8
-#   pub consts/statics                         12
+#   pub modules                                 1
+#   pub types (struct/enum/trait/alias)         9
+#   pub consts/statics                         14
 #   free functions                             16
 #   inherent methods                           29
 #   struct fields                               1
 #   enum variants                               1
-#   trait roster entries (type × trait)        41
-#   auto-trait-complete types                   8
+#   trait roster entries (type × trait)        45
+#   auto-trait-complete types                   9
 #
 # per-module pub lines:
-#   (root)                           67
+#   (root)                           70
+#   nonportable                       1
 
-## items (67 lines)
+## items (71 lines)
 
+pub mod nonportable
+pub struct nonportable::FxHasher
+pub const fn nonportable::FxHasher::new() -> Self
+pub const fn nonportable::FxHasher::with_seed(usize) -> Self
 #[non_exhaustive] pub enum Error
 pub Error::SecretTooShort
 pub Error::SecretTooShort::len: usize
@@ -91,7 +97,7 @@ pub fn xxh3_64_with_secret(&[u8], &[u8]) -> core::result::Result<u64, whereat::a
 pub fn xxh3_64_with_seed(&[u8], u64) -> u64
 pub fn xxh64(&[u8], u64) -> u64
 
-## trait impls (8 types)
+## trait impls (9 types)
 
 Error: Clone, Debug, Display, Eq, Error, PartialEq
 Fnv1a128: Clone, Debug, Default, Hasher, Write
@@ -101,7 +107,8 @@ RapidhashV3: Clone, Debug, Default, Hasher, Write
 Xxh3: Clone, Debug, Default, Hasher, Write
 Xxh32: Clone, Debug, Default, Hasher, Write
 Xxh64: Clone, Debug, Default, Hasher, Write
+nonportable::FxHasher: Clone, Debug, Default, Hasher
 
 ## auto traits
 
-8 types implement all of: Freeze, RefUnwindSafe, Send, Sync, Unpin, UnwindSafe
+9 types implement all of: Freeze, RefUnwindSafe, Send, Sync, Unpin, UnwindSafe
