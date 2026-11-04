@@ -57,6 +57,11 @@ Each `write` compresses its slice independently. In particular, concatenating
 two writes is not equivalent to one write with concatenated bytes, and an empty
 write is not an identity operation. `core::hash::Hasher` permits this behavior.
 It differs from zenhash's byte-streaming and portable-output guarantees.
+Those guarantees are not prerequisites for ordinary in-memory hash tables. The
+64-bit typed-integer fast path is a good candidate for trusted integer/struct
+keys; tiny byte strings use a separate compression path and need their own
+comparison. Compilation time and table throughput versus rapidhash are not
+measured in this evaluation.
 
 The source describes a small polynomial state and a wyhash-inspired byte
 compression function. This makes it useful to study for trusted in-memory hash

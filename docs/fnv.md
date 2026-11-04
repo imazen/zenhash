@@ -74,8 +74,27 @@ the byte loop and adds a final mixing step that spreads low-bit structure. It
 adds work and changes identifiers. Because it finalizes an existing FNV64 value,
 it cannot separate any pair of inputs that already collided under FNV64.
 
-For temporary in-memory hash tables, [rustc-hash](https://github.com/rust-lang/rustc-hash)
-is another lightweight option. Its pinned v2.1.3 FxHasher uses `usize` state and
+For trusted integer-heavy hash tables, [rustc-hash](https://github.com/rust-lang/rustc-hash)
+is the first candidate to benchmark. On 64-bit targets its typed integer writes
+use word-sized add/multiply operations followed by a rotation in `finish`.
+Our `RapidhashV3` trait adapter instead feeds integer bytes through its streaming
+state. This difference favors evaluating FxHasher for integer and composite
+struct keys; the [upstream rationale](https://github.com/rust-lang/rustc-hash#readme)
+explicitly prioritizes single-integer hashing in compiler workloads. It does not
+establish a universal winner for tiny byte strings or full hash-table operations.
+
+Both the snapshot and our rapidhash-only build have no normal dependencies or
+external procedural-macro crates. We have not measured comparative clean build
+times, downstream optimization cost or hash-table throughput. A compile-time
+advantage is a hypothesis to measure, not a published result here.
+
+The pointer-width and write-boundary differences below are permitted by the
+[Hasher contract](https://doc.rust-lang.org/core/hash/trait.Hasher.html), so they
+do not prevent ordinary in-memory `HashMap` use. Portable persisted byte hashes
+remain a separate requirement. This distinction is why rapidhash is recommended
+above specifically for portable byte fingerprints.
+
+Its pinned v2.1.3 FxHasher uses `usize` state and
 pointer-width-specific constants and rotation, with architecture-dependent byte
 mixing. It also hashes each `write` independently. It therefore does not satisfy
 zenhash's equal-output-across-platforms and arbitrary-streaming-splits contract;
