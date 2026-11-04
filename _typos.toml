@@ -11,6 +11,7 @@ extend-exclude = [
     "tests/reference/*.txt", # generated numeric golden hashes, not prose
     "tests/reference/xxhash.h", # pinned upstream reference; keep byte-identical
     "tests/reference/rapidhash.h",
+    "tools/rustc-hash-snapshot/upstream/", # pinned third-party source stays byte-identical
     "benchmarks/",
 ]
 

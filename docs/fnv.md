@@ -75,12 +75,14 @@ adds work and changes identifiers. Because it finalizes an existing FNV64 value,
 it cannot separate any pair of inputs that already collided under FNV64.
 
 For temporary in-memory hash tables, [rustc-hash](https://github.com/rust-lang/rustc-hash)
-is another lightweight option. Its current FxHasher uses `usize` state and
+is another lightweight option. Its pinned v2.1.3 FxHasher uses `usize` state and
 pointer-width-specific constants and rotation, with architecture-dependent byte
 mixing. It also hashes each `write` independently. It therefore does not satisfy
 zenhash's equal-output-across-platforms and arbitrary-streaming-splits contract;
 it is not a portable persisted-fingerprint replacement here. See its
-[current implementation](https://github.com/rust-lang/rustc-hash/blob/main/src/lib.rs).
+[pinned implementation](https://github.com/rust-lang/rustc-hash/blob/c13e7ccca705e6255387a2ebc6dca142d6881621/src/lib.rs).
+The [evaluation snapshot](../tools/rustc-hash-snapshot/README.md) preserves that
+source and records measured native/WASM and split-write counterexamples.
 
 `core::hash::Hasher` is implemented for every enabled hasher regardless of `std`.
 `std::hash::Hasher` re-exports that same trait. Only the I/O adapter requires

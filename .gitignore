@@ -51,3 +51,6 @@ __pycache__/
 /tests/reference/*.bak
 
 /.zenbench/
+
+/tools/rustc-hash-snapshot/target/
+!tools/rustc-hash-snapshot/Cargo.lock

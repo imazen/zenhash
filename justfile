@@ -272,3 +272,10 @@ dependency-audit:
 # First-release preview comparison; later releases also compare with crates.io.
 semver-baseline rev="origin/main":
     cargo semver-checks --all-features --baseline-rev {{rev}}
+
+# Pinned upstream FxHasher evaluation; this is separate from the public crate.
+fxhash-snapshot-test *ARGS:
+    cargo test --manifest-path tools/rustc-hash-snapshot/Cargo.toml {{ARGS}}
+
+fxhash-snapshot-probe *ARGS:
+    cargo run --manifest-path tools/rustc-hash-snapshot/Cargo.toml --example contract_probe {{ARGS}}

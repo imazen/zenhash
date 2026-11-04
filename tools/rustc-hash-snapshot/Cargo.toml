@@ -1,0 +1,22 @@
+[package]
+name = "zenhash-rustc-hash-snapshot"
+version = "0.0.0"
+edition = "2021"
+publish = false
+license = "MIT OR Apache-2.0"
+
+# Use the source unchanged; this package is an evaluation tool, not zenhash API.
+[lib]
+name = "rustc_hash"
+path = "upstream/src/lib.rs"
+
+[features]
+default = []
+std = []
+
+[lints.rust]
+unsafe_code = "forbid"
+# Upstream's optional rand/nightly modes are archived but not offered by this harness.
+unexpected_cfgs = { level = "warn", check-cfg = ['cfg(feature, values("rand", "nightly"))'] }
+
+[workspace]
