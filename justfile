@@ -6,7 +6,7 @@ QUALITY := ZENUTILS / "quality"
 default:
     @just --list
 
-# Test classic-only, XXH3 without std/AVX-512, and the default/full configurations
+# Test algorithm-free defaults, explicit XXH3 and the full configuration
 test:
     cargo test
     cargo test --no-default-features
@@ -167,6 +167,8 @@ algorithm-tests:
     cargo test --no-default-features --features xxh32
     cargo test --no-default-features --features xxh64
     cargo test --no-default-features --features rapidhash
+    cargo test --no-default-features --features fnv
+    cargo test --no-default-features --features fxhash
     cargo test --no-default-features --features std,rapidhash
     cargo test --all-features
 
@@ -183,7 +185,7 @@ conformance:
     cargo test --all-features --test tiers
 
 msrv-algorithms:
-    cargo +1.89 check --no-default-features --features xxh3,xxh32,xxh64,rapidhash
+    cargo +1.89 check --no-default-features --features xxh3,xxh32,xxh64,rapidhash,fnv,fxhash
 
 rapid-check: algorithm-tests clippy clippy-arch check-targets test-wasm features api-doc msrv-algorithms fuzz-check
     RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --all-features
