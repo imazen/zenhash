@@ -5,10 +5,11 @@ edition = "2024"
 publish = false
 
 [features]
-default = ["std", "xxh3", "xxh32", "xxh64", "rapidhash", "fnv", "io", "avx512"]
+default = ["std", "xxh3", "xxh32", "xxh64", "rapidhash", "fnv", "fxhash", "io", "avx512"]
 std = ["zenhash/std"]
 io = ["std", "zenhash/io"]
 fnv = ["zenhash/fnv"]
+fxhash = ["zenhash/fxhash", "dep:rustc-hash"]
 xxh3 = ["zenhash/xxh3"]
 xxh32 = ["zenhash/xxh32"]
 xxh64 = ["zenhash/xxh64"]
@@ -17,6 +18,8 @@ avx512 = ["zenhash/avx512"]
 _dev = ["zenhash/_dev"]
 
 [dependencies]
+# Direct test oracle; only enabled for the wrapper parity checks.
+rustc-hash = { version = "=2.1.3", default-features = false, optional = true }
 zenhash = { path = "../..", default-features = false }
 
 [profile.test]

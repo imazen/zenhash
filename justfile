@@ -227,7 +227,7 @@ bench-portable *ARGS:
 
 # Actual no_std dependency graph, all algorithms and the full corpus.
 stability-no-std:
-    cargo test --manifest-path tools/stability/Cargo.toml --no-default-features --features xxh3,xxh32,xxh64,rapidhash,fnv
+    cargo test --manifest-path tools/stability/Cargo.toml --no-default-features --features xxh3,xxh32,xxh64,rapidhash,fnv,fxhash
 
 # Fixed workload for external perf sampling; WASM emits jitdump in the cwd.
 profile-hash mode algorithm len chunk outer repetitions:
@@ -240,10 +240,10 @@ stability-wasm-wide:
 
 # Public docs.rs feature set, excluding the internal dispatch-test feature.
 docs:
-    RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --features xxh3,rapidhash,fnv,xxh32,xxh64,io
+    RUSTDOCFLAGS="-D warnings" cargo doc --no-deps --features xxh3,rapidhash,fnv,xxh32,xxh64,fxhash,io
 
 docs-open:
-    cargo doc --no-deps --features xxh3,rapidhash,fnv,xxh32,xxh64,io --open
+    cargo doc --no-deps --features xxh3,rapidhash,fnv,xxh32,xxh64,fxhash,io --open
 
 # Regenerate the crates.io/docs.rs landing page and reject stale committed output.
 readme-check:
@@ -279,3 +279,9 @@ fxhash-snapshot-test *ARGS:
 
 fxhash-snapshot-probe *ARGS:
     cargo run --manifest-path tools/rustc-hash-snapshot/Cargo.toml --example contract_probe {{ARGS}}
+
+# Isolated pinned FxHasher wrapper, plus the no_std dependency graph.
+fxhash-check:
+    cargo test --no-default-features --features fxhash
+    cargo test --manifest-path tools/stability/Cargo.toml --no-default-features --features fxhash
+    cargo check --target thumbv7em-none-eabihf --no-default-features --features fxhash

@@ -25,3 +25,7 @@ fn every_enabled_hash_matches_c() {
 #[cfg(all(test, feature = "fnv"))]
 #[path = "../../../tests/support/fnv.rs"]
 mod fnv;
+
+#[cfg(all(test, feature = "fxhash"))]
+#[path = "../../../tests/support/fxhash.rs"]
+mod fxhash;

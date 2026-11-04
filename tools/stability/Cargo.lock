@@ -43,6 +43,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "rustc-hash"
+version = "2.1.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "6b1e7f9a428571be2dc5bc0505c13fb6bf936822b894ec87abf8a08a4e51742d"
+
+[[package]]
 name = "safe_unaligned_simd"
 version = "0.2.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -82,6 +88,7 @@ name = "zenhash"
 version = "0.1.0"
 dependencies = [
  "archmage",
+ "rustc-hash",
  "whereat",
 ]
 
@@ -89,5 +96,6 @@ dependencies = [
 name = "zenhash-stability"
 version = "0.0.0"
 dependencies = [
+ "rustc-hash",
  "zenhash",
 ]

@@ -1,11 +1,11 @@
 # Output stability coverage
 
-`just stability` uses a standalone package whose only dependency is zenhash
+`just stability` uses a standalone package whose library dependency is zenhash
 with default features disabled. This matters: the root package's dev-dependencies
 enable archmage/std, so its tests alone cannot demonstrate a no_std library build.
 
 `just stability-configs` executes the feature powerset. CI partitions this work
-on Linux in sixteen parallel shards. Native portability jobs run default and all-feature integration tests;
+on Linux in thirty-two parallel shards. Native portability jobs run default and all-feature integration tests;
 i686 and s390x run through cross; WASI runs explicitly with SIMD128 disabled and
 enabled. Two additional isolated-corpus runs cover explicit `wide-arithmetic`,
 with SIMD off and on and the proposal enabled in Wasmtime. This compiler target
@@ -59,3 +59,16 @@ output with the committed text; expected values are never produced by zenhash.
 CI also tests `target-cpu=native` on Linux x86/ARM. Those builds use a fresh
 artifact directory because CPU-specific dependencies cannot safely share a
 cache across different runner CPUs. Portable builds continue to use the cache.
+
+## Nonportable FxHasher wrapper
+
+The `fxhash` feature joins the isolated runtime feature powerset. Its test-only
+oracle is the same exactly pinned rustc-hash 2.1.3 backend with default features
+disabled. Tests compare same-target output for independent byte patterns, short
+and boundary lengths, seven seeds, split and empty writes, repeated finish,
+clone continuation, every stable integer write, derived struct keys and real
+hash-table operations. The reference snapshot records independent known target
+and write-boundary differences. We assert upstream compatibility on each target,
+not equal output across different targets or write schedules. No existing
+portable hash expectation is relaxed. The isolated test graph keeps upstream
+`std`, `rand` and `nightly` disabled.
