@@ -94,7 +94,7 @@ do not prevent ordinary in-memory `HashMap` use. Portable persisted byte hashes
 remain a separate requirement. This distinction is why rapidhash is recommended
 above specifically for portable byte fingerprints.
 
-Its pinned v2.1.3 FxHasher uses `usize` state and
+The pinned v2.1.3 FxHasher uses `usize` state and
 pointer-width-specific constants and rotation, with architecture-dependent byte
 mixing. It also hashes each `write` independently. It therefore does not satisfy
 zenhash's equal-output-across-platforms and arbitrary-streaming-splits contract;
@@ -106,3 +106,10 @@ source and records measured native/WASM and split-write counterexamples.
 `core::hash::Hasher` is implemented for every enabled hasher regardless of `std`.
 `std::hash::Hasher` re-exports that same trait. Only the I/O adapter requires
 `io` (which enables `std`); the hash trait remains useful for `no_std` callers.
+
+The opt-in `fxhash` feature now provides `zenhash::nonportable::FxHasher` as a
+private-backend wrapper around `rustc-hash = "=2.1.3"`. It forwards typed integer
+writes directly and works without `std`; no upstream type appears in zenhash's
+public signatures. Use `core::hash::BuildHasherDefault` with the wrapper for
+standard hash tables. This namespace deliberately has no portable byte digest,
+streaming-update or I/O adapter API.

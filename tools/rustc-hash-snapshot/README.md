@@ -11,7 +11,9 @@ The harness is a separate, unpublished workspace. It compiles the unchanged
 upstream library with `unsafe_code = "forbid"`, no default features and no
 dependencies. It also offers upstream's `std` feature. Its optional `rand` and
 nightly modes are archived but not enabled by this harness. It is excluded from
-the published zenhash package and introduces no zenhash public API.
+the published zenhash package. The separate opt-in zenhash
+`nonportable::FxHasher` wrapper now depends on the exactly pinned registry
+version; it does not compile or expose this snapshot.
 
 ## Reproduce
 

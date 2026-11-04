@@ -4,6 +4,8 @@ zenhash provides hash algorithms in safe Rust. It currently implements the xxHas
 family, standard rapidhash v3 and FNV-1a compatibility formulas, with runtime
 SIMD dispatch for XXH3.
 Every algorithm is opt-in: enable `xxh3`, `rapidhash`, `fnv`, `xxh32` or `xxh64`.
+For trusted in-memory hash tables, `fxhash` adds `nonportable::FxHasher` backed
+by an exactly pinned rustc-hash version.
 The default `std` and `avx512` flags select integration and SIMD options only;
 they do not enable an algorithm or pull in its optional dependencies.
 
@@ -11,7 +13,9 @@ Our goal is `#![forbid(unsafe_code)]` with competitive performance across x86,
 ARM and WebAssembly, including WASM SIMD128. Cross-ISA performance parity is a
 goal. Measured performance varies with input size, target and runtime features;
 [ARM/WASM results](https://github.com/imazen/zenhash/blob/main/benchmarks/arm_wasm_2026-10-26.md)
-include the remaining gaps. Hash outputs must match the reference bit for bit on every ISA.
+include the remaining gaps. Portable byte hashes must match the reference bit
+for bit on every ISA; the explicitly nonportable adapter instead matches its
+pinned upstream on the same target.
 
 `no_std` + `alloc` · `#![forbid(unsafe_code)]` · MSRV 1.89 · x86-64 (AVX-512, AVX2, SSE2) / aarch64 (NEON) / wasm32 (SIMD128) · MIT OR Apache-2.0
 
@@ -52,7 +56,7 @@ assert_eq!(h.digest128(), h128);
 
 `Xxh3::new`, `Xxh3::with_seed` and `Xxh3::with_secret` pick the variant;
 one streaming state produces both widths. `Xxh64` and `Xxh32` have `new` and
-`with_seed`. All streaming hashers implement `core::hash::Hasher` without `std`.
+`with_seed`. All portable streaming hashers implement `core::hash::Hasher` without `std`.
 `std::hash::Hasher` is a re-export of that same trait, so it works too; the
 trait adapter does not need a separate feature. They also implement
 `std::io::Write` with the opt-in `io` feature, so `std::io::copy(&mut reader, &mut hasher)` works.
@@ -197,9 +201,10 @@ dispatch sees only the features enabled at compile time. Dispatch uses
 | `rapidhash` | no | Standard rapidhash v3, seeded/custom-secret functions and `RapidhashV3`; no runtime dependencies or allocation. |
 | `xxh32` | no | Classic XXH32 compatibility functions and `Xxh32`. |
 | `xxh64` | no | Classic XXH64 compatibility functions and `Xxh64`. |
+| `fxhash` | no | `nonportable::FxHasher`, wrapping exactly `rustc-hash = "=2.1.3"` with its default features disabled; no allocation or `std` required. |
 | `fnv` | no | FNV-1a32/64/128, continuation with an offset basis, XOR-folded 64→32 and FNV64 + fmix64. |
 | `std` | yes | Runtime CPU detection for XXH3 and standard-library error integration. |
-| `io` | no | `std::io::Write` for every enabled streaming hasher; enables `std`. |
+| `io` | no | `std::io::Write` for every enabled portable streaming hasher; enables `std`. |
 | `avx512` | yes | Compiles the AVX-512 tier when `xxh3` is enabled; does not enable XXH3 by itself. On the benchmark CPU, XXH3-64 at 64 KiB ran at 42.3 GiB/s with it and 32.3 GiB/s without (separate runs). Measure on your hardware: AVX-512 behaves differently across CPU generations. |
 
 To enable classic algorithms without XXH3 or its dependencies:
@@ -217,9 +222,39 @@ zenhash = { version = "0.1.0", default-features = false, features = ["std", "xxh
 For `no_std` XXH3, enable only `xxh3` (and optionally `avx512`); dispatch then
 uses compile-time target features. The internal `_dev` feature controls tier tests.
 
+## Nonportable hash tables
+
+```toml
+zenhash = { version = "0.1.0", features = ["fxhash"] }
+```
+
+```rust
+# #[cfg(feature = "fxhash")]
+# {
+use core::hash::BuildHasherDefault;
+use zenhash::nonportable::FxHasher;
+
+let mut map = std::collections::HashMap::<u64, &str, BuildHasherDefault<FxHasher>>::default();
+map.insert(42, "answer");
+assert_eq!(map[&42], "answer");
+# }
+```
+
+`FxHasher::new()` and `with_seed(usize)` wrap exactly rustc-hash 2.1.3 behind
+zenhash's own type. All stable typed integer writes delegate to upstream's
+corresponding methods. The feature works with `no_std` and does not enable
+upstream's `std`, `rand` or `nightly` features. Seeds and state are omitted from
+`Debug`.
+
+Use it for trusted in-memory keys. Output depends on the target and sequence of
+writes, including empty writes; it is unsuitable for persisted portable hashes
+or arbitrary byte-stream chunking. The `io` feature does not add `io::Write` to
+this type. The [pinned snapshot findings](https://github.com/imazen/zenhash/blob/main/tools/rustc-hash-snapshot/README.md)
+record these differences and the separate reference used during evaluation.
+
 ## Sans-I/O and FNV compatibility
 
-Every algorithm accepts byte slices and supports `update`/`digest` without I/O.
+Every portable algorithm accepts byte slices and supports `update`/`digest` without I/O.
 `std` controls runtime CPU detection; it does not enable I/O adapters. Enable
 `io` explicitly for `std::io::Write`. The default features do not include `io`.
 

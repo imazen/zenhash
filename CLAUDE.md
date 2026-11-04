@@ -2,7 +2,9 @@
 
 Opt-in XXH3 64/128, XXH64/XXH32, rapidhash v3 and FNV-1a in safe Rust (`#![forbid(unsafe_code)]`,
 `no_std` + `alloc`), MIT OR Apache-2.0. Output must equal the reference C
-implementation bit for bit on every target and SIMD tier.
+implementation bit for bit on every target and SIMD tier. The opt-in
+`nonportable::FxHasher` instead preserves its pinned backend on each target,
+including target-dependent and write-boundary-dependent behavior.
 
 ## Layout
 
@@ -22,6 +24,7 @@ implementation bit for bit on every target and SIMD tier.
   reference has no SIMD path for them either).
 
 - `src/rapidhash.rs`: standard rapidhash v3, seeded/custom-secret functions and bounded streaming state.
+- `src/nonportable.rs`: `fxhash`-gated private-backend wrapper around exactly rustc-hash 2.1.3; forward typed writes directly, not through bytes. No `io::Write`.
 - `src/fnv.rs`: FNV-1a32/64/128, caller-supplied offset bases and zen compatibility finalizers.
 - No algorithm is enabled by default. Default `std`/`avx512` options use weak dependency forwarding.
 - `core::hash::Hasher` (also re-exported as `std::hash::Hasher`) is always available for enabled hashers.
