@@ -67,7 +67,8 @@ A custom secret must be at least `XXH3_SECRET_SIZE_MIN` (136) bytes; shorter
 ones return `Err(At<Error::SecretTooShort>)` (errors carry a
 [whereat](https://crates.io/crates/whereat) location trace).
 
-`Hasher::write_u32` and the other integer methods feed native-endian bytes,
+For the portable algorithms, `Hasher::write_u32` and the other integer methods
+feed native-endian bytes,
 and `Hash` impls for slices add a platform-width length prefix. For hashes
 that must match across platforms, feed bytes with `update` or `write`.
 

@@ -29,7 +29,7 @@ seed/complement words exercise structured rather than only random inputs.
 The corpus is deterministic and bounded; it approximates selected SMHasher3
 key families without running its exhaustive statistical battery.
 
-Per enabled algorithm/configuration, the runner checks:
+Per enabled portable algorithm/configuration, the runner checks:
 
 - Canonical little-endian whole and prefix output against independent C fixtures.
 - One-shot versus streaming, a deterministic split, empty updates, repeated digest,
