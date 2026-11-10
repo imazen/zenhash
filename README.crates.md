@@ -60,12 +60,14 @@ assert_eq!(h.digest128(), h128);
 
 `Xxh3::new`, `Xxh3::with_seed` and `Xxh3::with_secret` pick the variant;
 one streaming state produces both widths. `Xxh64` and `Xxh32` have `new` and
-`with_seed`. All portable streaming hashers implement `core::hash::Hasher` without `std`.
+`with_seed`. The xxHash, rapidhash and FNV streaming types implement
+`core::hash::Hasher` without `std`.
 `std::hash::Hasher` is a re-export of that same trait, so it works too; the
 trait adapter does not need a separate feature. They also implement
 `std::io::Write` with the opt-in `io` feature, so `std::io::copy(&mut reader, &mut hasher)` works.
 The xxHash and rapidhash `Debug` output shows only the byte count, never seeds, secrets or
-buffered input.
+buffered input. Murmur states instead expose byte `update` and full-width
+`digest`; they do not implement the 64-bit `Hasher`/I/O adapters.
 
 A custom secret must be at least `XXH3_SECRET_SIZE_MIN` (136) bytes; shorter
 ones return `Err(At<Error::SecretTooShort>)` (errors carry a
@@ -351,7 +353,8 @@ MIT OR Apache-2.0, at your option: [MIT](https://github.com/imazen/zenhash/blob/
 or [Apache-2.0](https://github.com/imazen/zenhash/blob/main/LICENSE-APACHE).
 The xxHash implementation preserves the upstream [BSD-2-Clause notice](https://github.com/imazen/zenhash/blob/main/LICENSE-XXHASH).
 The rapidhash port preserves its upstream [MIT copyright and permission notice](https://github.com/imazen/zenhash/blob/main/LICENSE-RAPIDHASH).
-The MurmurHash3 module preserves Quickwit Inc.’s MIT notice in its source.
+The 32-bit MurmurHash3 port preserves Quickwit Inc.’s MIT notice; the 128-bit
+port preserves Austin Appleby’s public-domain declaration.
 
 ## AI-Generated Code Notice
 

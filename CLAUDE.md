@@ -27,7 +27,7 @@ including target-dependent and write-boundary-dependent behavior.
 - `src/nonportable.rs`: `fxhash`-gated private-backend wrapper around exactly rustc-hash 2.1.3; forward typed writes directly, not through bytes. No `io::Write`.
 - `src/fnv.rs`: FNV-1a32/64/128, caller-supplied offset bases and zen compatibility finalizers.
 - No algorithm is enabled by default. Default `std`/`avx512` options use weak dependency forwarding.
-- `core::hash::Hasher` (also re-exported as `std::hash::Hasher`) is always available for enabled hashers.
+- `core::hash::Hasher` is available for xxHash/rapidhash/FNV; Murmur states expose only byte update/full-width digest.
 - `std` enables CPU detection and standard error integration; only opt-in `io` adds `std::io::Write`.
 - `README.md` owns the shared landing-page content. `just readme` generates `README.crates.md`,
   included by the crate root and shipped as the crates.io README. `just docs` uses the public docs.rs feature set.
@@ -212,6 +212,6 @@ retain their cache. Current feature/portability coverage is documented in
 
 ## MurmurHash3
 
-`src/murmur3.rs` preserves the Quickwit MIT notice. Fixed x86_32 algorithm and little-endian reads on every architecture; never select the incompatible x64_128 variant by target. `docs/murmur3.md` owns provenance and the C-produced golden test contract. Const streaming is used for normalized ICC fingerprints; no Hasher/I/O wrapper is added without a caller.
+`src/murmur3.rs` preserves the Quickwit MIT notice for fixed x86_32. `src/murmur3_128.rs` ports canonical x64_128 from Appleby’s public-domain reference. Both are fixed portable algorithms on all ISAs; x64_128 never becomes the distinct x86_128 algorithm on x86. `docs/murmur3.md` owns provenance and the C-produced golden test contract. Const streaming is used for normalized ICC fingerprints; no Hasher/I/O wrapper is added without a caller.
 
 API snapshots use `nightly-2026-10-12` in justfile and CI. The floating nightly added compiler auto traits and failed the current-surface check despite unchanged source; update the pin and snapshots together.
