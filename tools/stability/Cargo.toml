@@ -5,10 +5,11 @@ edition = "2024"
 publish = false
 
 [features]
-default = ["std", "xxh3", "xxh32", "xxh64", "rapidhash", "fnv", "fxhash", "io", "avx512"]
+default = ["std", "xxh3", "xxh32", "xxh64", "rapidhash", "fnv", "fxhash", "murmur3", "io", "avx512"]
 std = ["zenhash/std"]
 io = ["std", "zenhash/io"]
 fnv = ["zenhash/fnv"]
+murmur3 = ["zenhash/murmur3"]
 fxhash = ["zenhash/fxhash", "dep:rustc-hash"]
 xxh3 = ["zenhash/xxh3"]
 xxh32 = ["zenhash/xxh32"]

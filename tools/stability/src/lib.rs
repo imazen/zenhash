@@ -29,3 +29,7 @@ mod fnv;
 #[cfg(all(test, feature = "fxhash"))]
 #[path = "../../../tests/support/fxhash.rs"]
 mod fxhash;
+
+#[cfg(all(test, feature = "murmur3"))]
+#[path = "../../../tests/support/murmur3.rs"]
+mod murmur3;

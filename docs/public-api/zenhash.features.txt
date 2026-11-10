@@ -1,5 +1,5 @@
 # zenhash public API — additions from non-default features
-# features: avx512,fnv,fxhash,io,rapidhash,std,xxh3,xxh32,xxh64
+# features: avx512,fnv,fxhash,io,murmur3,rapidhash,std,xxh3,xxh32,xxh64
 # (regenerated on every `cargo test` by zenutils-apidoc; ZEN_API_DOC=check verifies, =off skips).
 # Encodings: crate-name prefix stripped; auto traits collapse to a
 # count + exceptions; trait impls collapse to one roster line per
@@ -10,20 +10,20 @@
 ## summary
 #
 #   pub modules                                 1
-#   pub types (struct/enum/trait/alias)         9
-#   pub consts/statics                         14
+#   pub types (struct/enum/trait/alias)        11
+#   pub consts/statics                         22
 #   free functions                             16
 #   inherent methods                           29
 #   struct fields                               1
 #   enum variants                               1
-#   trait roster entries (type × trait)        45
-#   auto-trait-complete types                   9
+#   trait roster entries (type × trait)        49
+#   auto-trait-complete types                  11
 #
 # per-module pub lines:
-#   (root)                           70
+#   (root)                           80
 #   nonportable                       1
 
-## items (71 lines)
+## items (81 lines)
 
 pub mod nonportable
 pub struct nonportable::FxHasher
@@ -52,6 +52,14 @@ pub fn Fnv1a64::update(&mut self, &[u8])
 pub const fn Fnv1a64::with_basis(u64) -> Self
 pub const fn Fnv1a64::digest_fmix(&self) -> u64
 pub const fn Fnv1a64::digest_fold32(&self) -> u32
+pub struct Murmur3X64_128
+pub const fn Murmur3X64_128::digest(&self) -> u128
+pub const fn Murmur3X64_128::update(&mut self, &[u8])
+pub const fn Murmur3X64_128::with_seed(u32) -> Self
+pub struct Murmur3_32
+pub const fn Murmur3_32::digest(&self) -> u32
+pub const fn Murmur3_32::update(&mut self, &[u8])
+pub const fn Murmur3_32::with_seed(u32) -> Self
 pub struct RapidhashV3
 pub fn RapidhashV3::digest(&self) -> u64
 pub fn RapidhashV3::new() -> Self
@@ -85,6 +93,8 @@ pub fn fnv1a32(&[u8]) -> u32
 pub fn fnv1a64(&[u8]) -> u64
 pub fn fnv1a64_fmix(&[u8]) -> u64
 pub fn fnv1a64_fold32(&[u8]) -> u32
+pub const fn murmur3_32(&[u8], u32) -> u32
+pub const fn murmur3_x64_128(&[u8], u32) -> u128
 pub fn rapidhash_v3(&[u8]) -> u64
 pub fn rapidhash_v3_with_seed(&[u8], u64) -> u64
 pub fn rapidhash_v3_with_seed_and_secret(&[u8], u64, &[u64; 8]) -> u64
@@ -97,12 +107,14 @@ pub fn xxh3_64_with_secret(&[u8], &[u8]) -> core::result::Result<u64, whereat::a
 pub fn xxh3_64_with_seed(&[u8], u64) -> u64
 pub fn xxh64(&[u8], u64) -> u64
 
-## trait impls (9 types)
+## trait impls (11 types)
 
 Error: Clone, Debug, Display, Eq, Error, PartialEq
 Fnv1a128: Clone, Debug, Default, Hasher, Write
 Fnv1a32: Clone, Debug, Default, Hasher, Write
 Fnv1a64: Clone, Debug, Default, Hasher, Write
+Murmur3X64_128: Clone, Debug
+Murmur3_32: Clone, Debug
 RapidhashV3: Clone, Debug, Default, Hasher, Write
 Xxh3: Clone, Debug, Default, Hasher, Write
 Xxh32: Clone, Debug, Default, Hasher, Write
@@ -111,4 +123,4 @@ nonportable::FxHasher: Clone, Debug, Default, Hasher
 
 ## auto traits
 
-9 types implement all of: Freeze, RefUnwindSafe, Send, Sync, Unpin, UnwindSafe
+11 types implement all of: Freeze, RefUnwindSafe, Send, Sync, Unpin, UnwindSafe

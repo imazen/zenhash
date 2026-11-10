@@ -1,6 +1,6 @@
 # zenhash — agent notes
 
-Opt-in XXH3 64/128, XXH64/XXH32, rapidhash v3 and FNV-1a in safe Rust (`#![forbid(unsafe_code)]`,
+Opt-in XXH3 64/128, XXH64/XXH32, rapidhash v3, fixed portable MurmurHash3_x86_32/x64_128 and FNV-1a in safe Rust (`#![forbid(unsafe_code)]`,
 `no_std` + `alloc`), MIT OR Apache-2.0. Output must equal the reference C
 implementation bit for bit on every target and SIMD tier. The opt-in
 `nonportable::FxHasher` instead preserves its pinned backend on each target,
@@ -27,7 +27,7 @@ including target-dependent and write-boundary-dependent behavior.
 - `src/nonportable.rs`: `fxhash`-gated private-backend wrapper around exactly rustc-hash 2.1.3; forward typed writes directly, not through bytes. No `io::Write`.
 - `src/fnv.rs`: FNV-1a32/64/128, caller-supplied offset bases and zen compatibility finalizers.
 - No algorithm is enabled by default. Default `std`/`avx512` options use weak dependency forwarding.
-- `core::hash::Hasher` (also re-exported as `std::hash::Hasher`) is always available for enabled hashers.
+- `core::hash::Hasher` is available for xxHash/rapidhash/FNV; Murmur states expose only byte update/full-width digest.
 - `std` enables CPU detection and standard error integration; only opt-in `io` adds `std::io::Write`.
 - `README.md` owns the shared landing-page content. `just readme` generates `README.crates.md`,
   included by the crate root and shipped as the crates.io README. `just docs` uses the public docs.rs feature set.
@@ -209,3 +209,9 @@ artifacts; portable builds passed. Native-CPU jobs now compile in a fresh
 runner temporary directory. The subsequent full CI run passed. Portable builds
 retain their cache. Current feature/portability coverage is documented in
 `docs/stability.md`, and measured ARM/WASM results live under `benchmarks/`.
+
+## MurmurHash3
+
+`src/murmur3.rs` preserves the Quickwit MIT notice for fixed x86_32. `src/murmur3_128.rs` ports canonical x64_128 from Appleby’s public-domain reference. Both are fixed portable algorithms on all ISAs; x64_128 never becomes the distinct x86_128 algorithm on x86. `docs/murmur3.md` owns provenance and the C-produced golden test contract. Const streaming is used for normalized ICC fingerprints; no Hasher/I/O wrapper is added without a caller.
+
+API snapshots use `nightly-2026-10-12` in justfile and CI. The floating nightly added compiler auto traits and failed the current-surface check despite unchanged source; update the pin and snapshots together.

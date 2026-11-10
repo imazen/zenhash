@@ -40,7 +40,7 @@ jobs:
         run: cargo test --features xxh3
       - run: cargo test --no-default-features
       - name: Run all algorithms with a genuinely no_std dependency graph
-        run: cargo test --manifest-path tools/stability/Cargo.toml --no-default-features --features xxh3,xxh32,xxh64,rapidhash,fnv,fxhash
+        run: cargo test --manifest-path tools/stability/Cargo.toml --no-default-features --features xxh3,xxh32,xxh64,rapidhash,fnv,fxhash,murmur3
       # --all-features includes `avx512` and `_dev`, so the tier-permutation
       # test also disables tiers the target guarantees at compile time.
       - name: Test all algorithms against C outputs and SIMD tiers
@@ -107,13 +107,13 @@ jobs:
       - shell: bash
         run: |
           cargo test --target wasm32-wasip1 --all-features --lib --tests
-          cargo test --manifest-path tools/stability/Cargo.toml --target wasm32-wasip1 --no-default-features --features xxh3,xxh32,xxh64,rapidhash,fnv,fxhash
+          cargo test --manifest-path tools/stability/Cargo.toml --target wasm32-wasip1 --no-default-features --features xxh3,xxh32,xxh64,rapidhash,fnv,fxhash,murmur3
         env:
           RUSTFLAGS: -D warnings -Ctarget-feature=-simd128
       - shell: bash
         run: |
           cargo test --target wasm32-wasip1 --all-features --lib --tests
-          cargo test --manifest-path tools/stability/Cargo.toml --target wasm32-wasip1 --no-default-features --features xxh3,xxh32,xxh64,rapidhash,fnv,fxhash
+          cargo test --manifest-path tools/stability/Cargo.toml --target wasm32-wasip1 --no-default-features --features xxh3,xxh32,xxh64,rapidhash,fnv,fxhash,murmur3
         env:
           RUSTFLAGS: -D warnings -Ctarget-feature=+simd128
       - name: Test wide arithmetic without SIMD
@@ -139,6 +139,7 @@ jobs:
       - run: cargo check --target thumbv7em-none-eabihf --no-default-features
       - run: cargo check --target thumbv7em-none-eabihf --no-default-features --features xxh3
       - run: cargo check --target thumbv7em-none-eabihf --no-default-features --features rapidhash
+      - run: cargo check --target thumbv7em-none-eabihf --no-default-features --features murmur3
       - run: cargo check --target thumbv7em-none-eabihf --no-default-features --features fnv
       - run: cargo check --target thumbv7em-none-eabihf --no-default-features --features fxhash
 
@@ -164,10 +165,18 @@ jobs:
       - name: Test each algorithm alone (no_std library)
         shell: bash
         run: |
-          for algorithm in xxh3 xxh32 xxh64 rapidhash fnv fxhash; do
+          for algorithm in xxh3 xxh32 xxh64 rapidhash fnv fxhash murmur3; do
             cargo test --no-default-features --features "$algorithm"
           done
       - run: cargo test --no-default-features --features std,rapidhash
+      - name: Verify pinned Murmur3 C reference fixtures
+        run: |
+          mkdir -p target
+          c++ -std=c++17 -O2 -Wall -Wextra -Wno-implicit-fallthrough tools/murmur3-reference.cpp tests/reference/MurmurHash3.cpp -o target/murmur3-reference
+          target/murmur3-reference > target/murmur3.txt
+          diff -u tests/reference/murmur3.txt target/murmur3.txt
+          target/murmur3-reference --128 > target/murmur3-128.txt
+          diff -u tests/reference/murmur3-128.txt target/murmur3-128.txt
       - name: Verify pinned C reference fixtures
         shell: bash
         run: |
@@ -273,7 +282,10 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
-      - uses: dtolnay/rust-toolchain@nightly # rustdoc JSON needs nightly
+      # Match the local API snapshot recipe; tracking nightly changes auto traits.
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2026-10-12
       - run: rustup default stable
       - uses: Swatinem/rust-cache@v2
         with:
@@ -281,6 +293,7 @@ jobs:
       - run: cargo test --manifest-path apidoc/Cargo.toml
         env:
           ZEN_API_DOC: check
+          ZEN_API_DOC_TOOLCHAIN: nightly-2026-10-12
 
   coverage:
     name: Coverage

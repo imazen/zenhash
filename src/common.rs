@@ -24,6 +24,12 @@ pub(crate) const PRIME64_5: u64 = 0x27D4_EB2F_1656_67C5;
 
 /// Reads a little-endian `u32` at `i`. Callers guarantee `i + 4 <= b.len()`.
 #[inline(always)]
+#[cfg(any(
+    feature = "xxh3",
+    feature = "xxh32",
+    feature = "xxh64",
+    feature = "rapidhash"
+))]
 pub(crate) fn r32(b: &[u8], i: usize) -> u32 {
     let mut a = [0u8; 4];
     a.copy_from_slice(&b[i..i + 4]);
@@ -32,11 +38,24 @@ pub(crate) fn r32(b: &[u8], i: usize) -> u32 {
 
 /// Reads a little-endian `u64` at `i`. Callers guarantee `i + 8 <= b.len()`.
 #[inline(always)]
-#[cfg(any(feature = "xxh3", feature = "xxh64", feature = "rapidhash"))]
-pub(crate) fn r64(b: &[u8], i: usize) -> u64 {
+#[cfg(any(
+    feature = "xxh3",
+    feature = "xxh64",
+    feature = "rapidhash",
+    feature = "murmur3"
+))]
+pub(crate) const fn r64(b: &[u8], i: usize) -> u64 {
     let mut a = [0u8; 8];
-    a.copy_from_slice(&b[i..i + 8]);
+    a.copy_from_slice(b.split_at(i).1.split_at(8).0);
     u64::from_le_bytes(a)
+}
+
+/// Austin Appleby's MurmurHash3 64-bit finalizer, also used by FNV compatibility.
+#[cfg(any(feature = "fnv", feature = "murmur3"))]
+pub(crate) const fn fmix64(h: u64) -> u64 {
+    let h = (h ^ (h >> 33)).wrapping_mul(0xff51afd7ed558ccd);
+    let h = (h ^ (h >> 33)).wrapping_mul(0xc4ceb9fe1a85ec53);
+    h ^ (h >> 33)
 }
 
 /// Fills `buf[*len..]` from the front of `input` and returns the unused rest of
