@@ -59,3 +59,12 @@ platform × feature-set product. Exact schedules and method coverage are in
 These are bounded output-stability tests, not SMHasher3's statistical avalanche,
 bit-independence or distribution tests. C expectations are compact per-variant
 fingerprints, supplemented by per-case Rust oracles and individual C vectors.
+
+
+`just murmur3-check` regenerates x86_32 and x64_128 golden pairs from the
+unmodified public-domain SMHasher reference at 07bb4de1. The 128-bit fixture
+also records the incompatible x86_128 result for contrast. Numeric 128-bit
+hexadecimal stores h2 in the high bits and h1 in the low bits; canonical output
+bytes are h1 little-endian followed by h2 little-endian. Both Rust APIs use
+fixed variants on every ISA, with no host-based choice. See
+[the portability contract](../../docs/murmur3.md).

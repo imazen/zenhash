@@ -1,6 +1,6 @@
 # zenhash — agent notes
 
-Opt-in XXH3 64/128, XXH64/XXH32, rapidhash v3, MurmurHash3_x86_32 and FNV-1a in safe Rust (`#![forbid(unsafe_code)]`,
+Opt-in XXH3 64/128, XXH64/XXH32, rapidhash v3, fixed portable MurmurHash3_x86_32/x64_128 and FNV-1a in safe Rust (`#![forbid(unsafe_code)]`,
 `no_std` + `alloc`), MIT OR Apache-2.0. Output must equal the reference C
 implementation bit for bit on every target and SIMD tier. The opt-in
 `nonportable::FxHasher` instead preserves its pinned backend on each target,

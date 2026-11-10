@@ -18,6 +18,7 @@
 - XXH32/XXH64 require opt-in `xxh32`/`xxh64` features (approved before the first release; follows `3dea22a4`).
 
 ### Added
+- Fixed portable canonical MurmurHash3_x64_128, with full-width const/streaming APIs, independent C golden pairs and SMHasher verification codes. Architecture names select algorithms, never host-dependent dispatch.
 - Opt-in const MurmurHash3_x86_32 with bounded streaming for ICC fingerprints; fixed little-endian behavior and 316 independent C golden pairs across the portability matrix.
 - Opt-in `nonportable::FxHasher`, with private backend `rustc-hash = "=2.1.3"`, typed integer forwarding and no_std support (`a202dc11`).
 - README API quick reference and shared crates.io/docs.rs landing page; docs.rs builds every public algorithm and the optional I/O adapter.

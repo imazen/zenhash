@@ -15,7 +15,9 @@ whereat::define_at_crate_info!();
     feature = "xxh3",
     feature = "xxh32",
     feature = "xxh64",
-    feature = "rapidhash"
+    feature = "rapidhash",
+    feature = "fnv",
+    feature = "murmur3"
 ))]
 mod common;
 #[cfg(feature = "fxhash")]
@@ -25,12 +27,16 @@ pub mod nonportable;
 mod fnv;
 #[cfg(feature = "murmur3")]
 mod murmur3;
+#[cfg(feature = "murmur3")]
+mod murmur3_128;
 #[cfg(feature = "fnv")]
 pub use fnv::{
     Fnv1a32, Fnv1a64, Fnv1a128, fnv1a32, fnv1a64, fnv1a64_fmix, fnv1a64_fold32, fnv1a128,
 };
 #[cfg(feature = "murmur3")]
 pub use murmur3::{Murmur3_32, murmur3_32};
+#[cfg(feature = "murmur3")]
+pub use murmur3_128::{Murmur3X64_128, murmur3_x64_128};
 #[cfg(feature = "rapidhash")]
 mod rapidhash;
 

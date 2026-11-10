@@ -4,23 +4,38 @@
 #include "../tests/reference/MurmurHash3.h"
 #include <array>
 #include <cstdint>
+#include <cinttypes>
 #include <cstdio>
+#include <cstring>
 #include <vector>
-int main() {
+int main(int argc, char** argv) {
+    const bool wide = argc == 2 && std::strcmp(argv[1], "--128") == 0;
+    if (argc > 2 || (argc == 2 && !wide)) return 2;
     const uint32_t endian = 1;
     if (*reinterpret_cast<const uint8_t*>(&endian) != 1) return 1;
     const std::array<uint32_t, 4> seeds = {0, 42, 3242157231u, 0xffffffffu};
     std::vector<int> lengths;
     for (int n = 0; n <= 67; ++n) lengths.push_back(n);
     for (int n : {255, 256, 257, 511, 512, 513, 1023, 1024, 4095, 4096, 4097}) lengths.push_back(n);
-    std::puts("# seed_hex length pattern37_hash_hex");
+    std::puts(wide ? "# seed_hex length x64_128_numeric_hex x86_128_numeric_hex"
+                   : "# seed_hex length pattern37_hash_hex");
     for (uint32_t seed : seeds) {
         for (int len : lengths) {
             std::vector<uint8_t> input(static_cast<size_t>(len) + 4);
             for (int i = 0; i < len; ++i) input[i] = static_cast<uint8_t>(i * 37 + 11);
-            uint32_t out = 0;
-            MurmurHash3_x86_32(input.data(), len, seed, &out);
-            std::printf("%08x %d %08x\n", seed, len, out);
+            if (wide) {
+                std::array<uint64_t, 2> x64{};
+                std::array<uint32_t, 4> x86{};
+                MurmurHash3_x64_128(input.data(), len, seed, x64.data());
+                MurmurHash3_x86_128(input.data(), len, seed, x86.data());
+                std::printf("%08x %d %016" PRIx64 "%016" PRIx64
+                            " %08x%08x%08x%08x\n", seed, len,
+                            x64[1], x64[0], x86[3], x86[2], x86[1], x86[0]);
+            } else {
+                uint32_t out = 0;
+                MurmurHash3_x86_32(input.data(), len, seed, &out);
+                std::printf("%08x %d %08x\n", seed, len, out);
+            }
         }
     }
 }

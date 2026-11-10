@@ -99,9 +99,7 @@ impl Fnv1a64 {
     /// fingerprint formula. The streaming state remains unfinalized.
     #[must_use]
     pub const fn digest_fmix(&self) -> u64 {
-        let h = (self.state ^ (self.state >> 33)).wrapping_mul(0xff51afd7ed558ccd);
-        let h = (h ^ (h >> 33)).wrapping_mul(0xc4ceb9fe1a85ec53);
-        h ^ (h >> 33)
+        crate::common::fmix64(self.state)
     }
 }
 

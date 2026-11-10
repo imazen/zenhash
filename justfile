@@ -295,6 +295,8 @@ murmur3-check:
     c++ -std=c++17 -O2 -Wall -Wextra -Wno-implicit-fallthrough tools/murmur3-reference.cpp tests/reference/MurmurHash3.cpp -o target/murmur3-reference
     target/murmur3-reference > target/murmur3.txt
     diff -u tests/reference/murmur3.txt target/murmur3.txt
+    target/murmur3-reference --128 > target/murmur3-128.txt
+    diff -u tests/reference/murmur3-128.txt target/murmur3-128.txt
     cargo test --no-default-features --features murmur3
 
 # Execute the same golden pairs in isolated ARM64 and WASI configurations.
