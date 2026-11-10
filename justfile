@@ -2,6 +2,7 @@
 
 ZENUTILS := env_var_or_default("ZENUTILS", justfile_directory() / "../zenutils")
 QUALITY := ZENUTILS / "quality"
+apidoc_toolchain := "nightly-2026-10-12"
 
 default:
     @just --list
@@ -61,14 +62,14 @@ features:
 # Format, then regenerate docs/public-api/ (commit the diff with the code change)
 fmt:
     cargo fmt
-    cargo test --manifest-path apidoc/Cargo.toml
+    ZEN_API_DOC_TOOLCHAIN={{apidoc_toolchain}} cargo test --manifest-path apidoc/Cargo.toml
 
 api-doc:
-    cargo test --manifest-path apidoc/Cargo.toml
+    ZEN_API_DOC_TOOLCHAIN={{apidoc_toolchain}} cargo test --manifest-path apidoc/Cargo.toml
 
 # Verify the committed API snapshots without rewriting them
 api-doc-check:
-    ZEN_API_DOC=check cargo test --manifest-path apidoc/Cargo.toml
+    ZEN_API_DOC=check ZEN_API_DOC_TOOLCHAIN={{apidoc_toolchain}} cargo test --manifest-path apidoc/Cargo.toml
 
 # What ships to crates.io, and does the packaged copy build
 package:

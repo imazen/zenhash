@@ -213,3 +213,5 @@ retain their cache. Current feature/portability coverage is documented in
 ## MurmurHash3
 
 `src/murmur3.rs` preserves the Quickwit MIT notice. Fixed x86_32 algorithm and little-endian reads on every architecture; never select the incompatible x64_128 variant by target. `docs/murmur3.md` owns provenance and the C-produced golden test contract. Const streaming is used for normalized ICC fingerprints; no Hasher/I/O wrapper is added without a caller.
+
+API snapshots use `nightly-2026-10-12` in justfile and CI. The floating nightly added compiler auto traits and failed the current-surface check despite unchanged source; update the pin and snapshots together.

@@ -280,7 +280,10 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: dtolnay/rust-toolchain@stable
-      - uses: dtolnay/rust-toolchain@nightly # rustdoc JSON needs nightly
+      # Match the local API snapshot recipe; tracking nightly changes auto traits.
+      - uses: dtolnay/rust-toolchain@master
+        with:
+          toolchain: nightly-2026-10-12
       - run: rustup default stable
       - uses: Swatinem/rust-cache@v2
         with:
@@ -288,6 +291,7 @@ jobs:
       - run: cargo test --manifest-path apidoc/Cargo.toml
         env:
           ZEN_API_DOC: check
+          ZEN_API_DOC_TOOLCHAIN: nightly-2026-10-12
 
   coverage:
     name: Coverage
