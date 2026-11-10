@@ -3,7 +3,7 @@
 zenhash provides hash algorithms in safe Rust. It currently implements the xxHash
 family, standard rapidhash v3 and FNV-1a compatibility formulas, with runtime
 SIMD dispatch for XXH3.
-Every algorithm is opt-in: enable `xxh3`, `rapidhash`, `fnv`, `xxh32` or `xxh64`.
+Every algorithm is opt-in: enable `xxh3`, `rapidhash`, `murmur3`, `fnv`, `xxh32` or `xxh64`.
 For trusted in-memory hash tables, `fxhash` adds `nonportable::FxHasher` backed
 by an exactly pinned rustc-hash version.
 The default `std` and `avx512` flags select integration and SIMD options only;
@@ -51,6 +51,7 @@ assert_eq!(h.digest128(), h128);
 | XXH3, 128-bit | [`xxh3_128`](https://docs.rs/zenhash/latest/zenhash/fn.xxh3_128.html), [`xxh3_128_with_seed`](https://docs.rs/zenhash/latest/zenhash/fn.xxh3_128_with_seed.html), [`xxh3_128_with_secret`](https://docs.rs/zenhash/latest/zenhash/fn.xxh3_128_with_secret.html) | [`Xxh3::digest128`](https://docs.rs/zenhash/latest/zenhash/struct.Xxh3.html#method.digest128) |
 | XXH64 ([`xxh64`](https://docs.rs/zenhash/latest/zenhash/fn.xxh64.html) feature) | `xxh64(data, seed)` | [`Xxh64::digest`](https://docs.rs/zenhash/latest/zenhash/struct.Xxh64.html#method.digest) |
 | XXH32 ([`xxh32`](https://docs.rs/zenhash/latest/zenhash/fn.xxh32.html) feature) | `xxh32(data, seed)` | [`Xxh32::digest`](https://docs.rs/zenhash/latest/zenhash/struct.Xxh32.html#method.digest) |
+| MurmurHash3_x86_32 (`murmur3` feature) | `murmur3_32(data, seed)` | `Murmur3_32::with_seed(seed)`, `update`, `digest` |
 | FNV-1a (`fnv` feature) | [`fnv1a32`](https://docs.rs/zenhash/latest/zenhash/fn.fnv1a32.html), [`fnv1a64`](https://docs.rs/zenhash/latest/zenhash/fn.fnv1a64.html), [`fnv1a128`](https://docs.rs/zenhash/latest/zenhash/fn.fnv1a128.html), [`fnv1a64_fold32`](https://docs.rs/zenhash/latest/zenhash/fn.fnv1a64_fold32.html), [`fnv1a64_fmix`](https://docs.rs/zenhash/latest/zenhash/fn.fnv1a64_fmix.html) | `Fnv1a32` / `Fnv1a64` / `Fnv1a128` digests |
 | rapidhash v3 (`rapidhash` feature) | [`rapidhash_v3`](https://docs.rs/zenhash/latest/zenhash/fn.rapidhash_v3.html), [`rapidhash_v3_with_seed`](https://docs.rs/zenhash/latest/zenhash/fn.rapidhash_v3_with_seed.html), [`rapidhash_v3_with_seed_and_secret`](https://docs.rs/zenhash/latest/zenhash/fn.rapidhash_v3_with_seed_and_secret.html) | [`RapidhashV3::digest`](https://docs.rs/zenhash/latest/zenhash/struct.RapidhashV3.html#method.digest) |
 
@@ -110,6 +111,21 @@ For allocation-free `no_std` hashing without XXH3 dependencies:
 ```toml
 zenhash = { version = "0.1.0", default-features = false, features = ["rapidhash"] }
 ```
+
+## MurmurHash3
+
+The opt-in `murmur3` feature implements **MurmurHash3_x86_32** with explicit
+little-endian loads on every target. The name identifies the algorithm; it does
+not select an algorithm based on the CPU. The x86-128 and x64-128 variants are
+not implemented. Use `murmur3_32(bytes, seed)` or stream through
+`Murmur3_32::with_seed(seed)`, `update`, and non-consuming `digest`.
+Both paths support const evaluation and allocate nothing. The seed is explicit;
+Quickwit's default is `3_242_157_231`, while zero is common elsewhere.
+
+[Portability, provenance and independent golden pairs](docs/murmur3.md) specify
+byte order, length handling and the test matrix. The zenpixels ICC fingerprint
+is the current consumer. A 32-bit digest is not a replacement for a wider
+identity or a cryptographic digest.
 
 ## Rapidhash v3
 
@@ -203,6 +219,7 @@ dispatch sees only the features enabled at compile time. Dispatch uses
 | `xxh32` | no | Classic XXH32 compatibility functions and `Xxh32`. |
 | `xxh64` | no | Classic XXH64 compatibility functions and `Xxh64`. |
 | `fxhash` | no | `nonportable::FxHasher`, wrapping exactly `rustc-hash = "=2.1.3"` with its default features disabled; no allocation or `std` required. |
+| `murmur3` | no | Fixed MurmurHash3_x86_32, const one-shot and allocation-free streaming; no dependencies. |
 | `fnv` | no | FNV-1a32/64/128, continuation with an offset basis, XOR-folded 64→32 and FNV64 + fmix64. |
 | `std` | yes | Runtime CPU detection for XXH3 and standard-library error integration. |
 | `io` | no | `std::io::Write` for every enabled portable streaming hasher; enables `std`. |
@@ -356,6 +373,7 @@ MIT OR Apache-2.0, at your option: [MIT](https://github.com/imazen/zenhash/blob/
 or [Apache-2.0](https://github.com/imazen/zenhash/blob/main/LICENSE-APACHE).
 The xxHash implementation preserves the upstream [BSD-2-Clause notice](https://github.com/imazen/zenhash/blob/main/LICENSE-XXHASH).
 The rapidhash port preserves its upstream [MIT copyright and permission notice](https://github.com/imazen/zenhash/blob/main/LICENSE-RAPIDHASH).
+The MurmurHash3 module preserves Quickwit Inc.’s MIT notice in its source.
 
 ## AI-Generated Code Notice
 

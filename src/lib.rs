@@ -23,10 +23,14 @@ pub mod nonportable;
 
 #[cfg(feature = "fnv")]
 mod fnv;
+#[cfg(feature = "murmur3")]
+mod murmur3;
 #[cfg(feature = "fnv")]
 pub use fnv::{
     Fnv1a32, Fnv1a64, Fnv1a128, fnv1a32, fnv1a64, fnv1a64_fmix, fnv1a64_fold32, fnv1a128,
 };
+#[cfg(feature = "murmur3")]
+pub use murmur3::{Murmur3_32, murmur3_32};
 #[cfg(feature = "rapidhash")]
 mod rapidhash;
 

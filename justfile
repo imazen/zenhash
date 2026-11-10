@@ -287,3 +287,16 @@ fxhash-check:
     cargo test --no-default-features --features fxhash
     cargo test --manifest-path tools/stability/Cargo.toml --no-default-features --features fxhash
     cargo check --target thumbv7em-none-eabihf --no-default-features --features fxhash
+
+# Regenerate independent Murmur3 goldens into target/ and require exact equality.
+murmur3-check:
+    mkdir -p target
+    c++ -std=c++17 -O2 -Wall -Wextra -Wno-implicit-fallthrough tools/murmur3-reference.cpp tests/reference/MurmurHash3.cpp -o target/murmur3-reference
+    target/murmur3-reference > target/murmur3.txt
+    diff -u tests/reference/murmur3.txt target/murmur3.txt
+    cargo test --no-default-features --features murmur3
+
+# Execute the same golden pairs in isolated ARM64 and WASI configurations.
+murmur3-platforms:
+    CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER=aarch64-linux-gnu-gcc CARGO_TARGET_AARCH64_UNKNOWN_LINUX_GNU_RUNNER="qemu-aarch64 -L /usr/aarch64-linux-gnu" cargo test --manifest-path tools/stability/Cargo.toml --no-default-features --features murmur3 --target aarch64-unknown-linux-gnu
+    CARGO_TARGET_WASM32_WASIP1_RUNNER=wasmtime cargo test --manifest-path tools/stability/Cargo.toml --no-default-features --features murmur3 --target wasm32-wasip1

@@ -4,7 +4,8 @@
     feature = "xxh64",
     feature = "rapidhash",
     feature = "fnv",
-    feature = "fxhash"
+    feature = "fxhash",
+    feature = "murmur3"
 ))]
 
 // One integration-test binary: every top-level file in tests/ links
@@ -102,3 +103,7 @@ mod fnv;
 #[cfg(feature = "fxhash")]
 #[path = "../support/fxhash.rs"]
 mod fxhash;
+
+#[cfg(feature = "murmur3")]
+#[path = "../support/murmur3.rs"]
+mod murmur3;

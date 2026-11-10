@@ -1,6 +1,6 @@
 # zenhash — agent notes
 
-Opt-in XXH3 64/128, XXH64/XXH32, rapidhash v3 and FNV-1a in safe Rust (`#![forbid(unsafe_code)]`,
+Opt-in XXH3 64/128, XXH64/XXH32, rapidhash v3, MurmurHash3_x86_32 and FNV-1a in safe Rust (`#![forbid(unsafe_code)]`,
 `no_std` + `alloc`), MIT OR Apache-2.0. Output must equal the reference C
 implementation bit for bit on every target and SIMD tier. The opt-in
 `nonportable::FxHasher` instead preserves its pinned backend on each target,
@@ -209,3 +209,7 @@ artifacts; portable builds passed. Native-CPU jobs now compile in a fresh
 runner temporary directory. The subsequent full CI run passed. Portable builds
 retain their cache. Current feature/portability coverage is documented in
 `docs/stability.md`, and measured ARM/WASM results live under `benchmarks/`.
+
+## MurmurHash3
+
+`src/murmur3.rs` preserves the Quickwit MIT notice. Fixed x86_32 algorithm and little-endian reads on every architecture; never select the incompatible x64_128 variant by target. `docs/murmur3.md` owns provenance and the C-produced golden test contract. Const streaming is used for normalized ICC fingerprints; no Hasher/I/O wrapper is added without a caller.
