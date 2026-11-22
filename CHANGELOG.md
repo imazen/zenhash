@@ -8,6 +8,8 @@
 
 ### Dependency compatibility
 
+- Bump `archmage` requirement to `0.9.33`.
+
 - Bump `archmage` requirement to `0.9.32` and `zenbench` dev-dependency to `0.1.11`; pass `CROSS_CONTAINER_OPTS: --security-opt seccomp=unconfined` in the `i686` CI job.
 
 - Use the stable archmage 0.9.31 cohort so the optional pixel hashing consumer can share it.
